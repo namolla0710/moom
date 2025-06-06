@@ -138,4 +138,4 @@ if __name__ == '__main__':
     print("🚀 Flask-SocketIO 서버가 http://localhost:8080 에서 실행됩니다.")
     # debug=True는 개발 중 코드 변경 시 서버를 자동 재시작해주는 편리한 기능입니다.
     # HTTPS를 사용하려면 이전 답변처럼 ssl_context 인자를 추가하세요.
-    socketio.run(app, host='0.0.0.0', port=8080, debug=True)
+    socketio.run(app, port=8080, debug=True)
