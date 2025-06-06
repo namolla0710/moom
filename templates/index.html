@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Python WebRTC 화상회의</title>
+    <style>
+        :root {
+            --primary-bg: #2c2f33;
+            --secondary-bg: #23272a;
+            --tertiary-bg: #40444b;
+            --primary-accent: #7289da;
+            --primary-accent-hover: #677bc4;
+            --danger-accent: #f04747;
+            --text-light: #ffffff;
+            --text-muted: #99aab5;
+        }
+        body { 
+            font-family: 'Malgun Gothic', sans-serif; 
+            background-color: var(--primary-bg); 
+            color: var(--text-light); 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            justify-content: center; 
+            align-items: center; 
+        }
+        
+        /* --- 로비 스타일 --- */
+        #lobby { text-align: center; width: 90%; max-width: 900px; }
+        .lobby-container { display: flex; flex-direction: column; justify-content: space-around; margin-top: 20px; gap: 40px; }
+        #room-list-container, #create-room-form { background-color: var(--secondary-bg); padding: 25px; border-radius: 8px; flex: 1; }
+        h1 { font-size: 2.5em; color: var(--primary-accent); }
+        h2 { margin-top: 0; border-bottom: 1px solid var(--tertiary-bg); padding-bottom: 15px; }
+        #room-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
+        #room-list li { background-color: var(--tertiary-bg); margin-bottom: 10px; padding: 15px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
+        #room-list li:hover { background-color: #555b62; }
+        #room-list .room-info span { margin-right: 15px; }
+        #room-list .lock-icon { color: var(--text-muted); font-size: 1.2em; }
+        #create-room-form input { display: block; width: calc(100% - 22px); font-size: 1.1em; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #555; background-color: var(--primary-bg); color: var(--text-light); }
+        #create-join-btn { width: 100%; font-size: 1.2em; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; background-color: var(--primary-accent); color: var(--text-light); transition: background-color 0.2s; }
+        #create-join-btn:hover { background-color: var(--primary-accent-hover); }
+
+        /* --- 회의실 스타일 --- */
+        #meeting-room { display: none; width: 100%; height: 100%; flex-direction: column; }
+        #header { padding: 10px; background-color: var(--secondary-bg); text-align: center; font-size: 1.2em; }
+        #header span { font-weight: bold; color: var(--primary-accent); }
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        #video-container { flex: 3; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; padding: 10px; background-color: var(--primary-bg); overflow-y: auto; }
+        video { width: 100%; border-radius: 8px; background-color: #000; transform: scaleX(-1); }
+        .video-wrapper { position: relative; }
+        .video-wrapper p { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 5px; font-size: 0.9em; }
+        #my-video-wrapper { border: 2px solid var(--primary-accent); border-radius: 10px; }
+        #my-video-wrapper p { font-weight: bold; }
+        #chat-container { flex: 1; display: flex; flex-direction: column; background-color: var(--secondary-bg); padding: 10px; min-width: 300px; }
+        #chat-messages { flex-grow: 1; overflow-y: auto; border: 1px solid var(--tertiary-bg); padding: 10px; margin-bottom: 10px; list-style-type: none; }
+        #chat-messages::-webkit-scrollbar { display: none; }
+        #chat-messages li:not(.other-chat-pn) { margin-bottom: 8px; word-break: break-all; }
+        .my-chat { 
+            text-align: right;
+            background-color: var(--primary-accent);
+            min-height: 2em;
+            border-radius: 0.5em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
+            padding-right: 1em;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        .other-chat {
+            text-align: left;
+            background-color: var(--tertiary-bg);
+            min-height: 2em;
+            border-radius: 0.5em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
+            padding-left: 1em;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .other-chat-pn {
+            text-align: left;
+            padding-left: 0.5em;
+            margin-bottom: 0;
+        }
+        #chat-form { display: flex; }
+        #chat-input { flex-grow: 1; border: none; padding: 8px; background-color: var(--tertiary-bg); color: var(--text-light); }
+        #controls { text-align: center; padding: 15px; background-color: var(--secondary-bg); }
+        #controls button { background-color: var(--primary-accent); color: white; border: none; padding: 10px 15px; margin: 0 5px; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
+        #controls button:hover { background-color: var(--primary-accent-hover); }
+        #controls button.off { background-color: var(--danger-accent); }
+    </style>
+</head>
+<body>
+
+    <div id="lobby">
+        <h1>WebRTC 화상 회의</h1>
+        <div class="lobby-container">
+            <div id="room-list-container">
+                <h2>활성화된 방 목록</h2>
+                <ul id="room-list"></ul>
+            </div>
+            <div id="create-room-form">
+                <h2>새로운 방 만들기 / 입장</h2>
+                <input id="nickname-input" type="text" placeholder="사용할 닉네임을 입력하세요" required>
+                <input id="room-name-input" type="text" placeholder="방 이름을 입력하세요" required>
+                <input id="password-input" type="password" placeholder="비밀번호 (없으면 공개 방)">
+                <button id="create-join-btn">입장하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="meeting-room">
+        <div id="header">현재 방: <span id="room-name-display"></span></div>
+        <div class="main-container">
+            <div id="video-container">
+                <div id="my-video-wrapper" class="video-wrapper">
+                    <video id="my-video" autoplay muted></video>
+                    <p id="my-nickname-display">나 (You)</p>
+                </div>
+            </div>
+            <div id="chat-container">
+                <ul id="chat-messages"></ul>
+                <form id="chat-form">
+                    <input id="chat-input" type="text" placeholder="메시지를 입력하세요..." autocomplete="off">
+                </form>
+            </div>
+        </div>
+        <div id="controls">
+            <button id="mute-btn">음소거</button>
+            <button id="camera-btn">카메라 끄기</button>
+            <button id="share-screen-btn">화면 공유</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        // -----------------
+        // 1. 초기 설정 및 변수 선언
+        // -----------------
+        const socket = io();
+
+        // DOM 요소
+        const lobby = document.getElementById('lobby');
+        const nicknameInput = document.getElementById('nickname-input');
+        const roomNameInput = document.getElementById('room-name-input');
+        const passwordInput = document.getElementById('password-input');
+        const createJoinBtn = document.getElementById('create-join-btn');
+        const roomList = document.getElementById('room-list');
+        const meetingRoom = document.getElementById('meeting-room');
+        const roomNameDisplay = document.getElementById('room-name-display');
+        const myNicknameDisplay = document.getElementById('my-nickname-display');
+        const videoContainer = document.getElementById('video-container');
+        const myVideo = document.getElementById('my-video');
+        const muteBtn = document.getElementById('mute-btn');
+        const cameraBtn = document.getElementById('camera-btn');
+        const shareScreenBtn = document.getElementById('share-screen-btn');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+
+        // 상태 변수
+        let myStream;
+        let peerConnections = {};
+        let peerNicknames = {};
+        let myNickname;
+        let currentRoomName;
+        let isMuted = false;
+        let isCameraOff = false;
+        let isScreenSharing = false;
+        let isStreamReady = false;
+        let pendingPeers = [];
+        let pendingOffers = [];
+
+        // WebRTC STUN 서버 설정
+        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        // -----------------
+        // 2. 로비 기능 관련 로직
+        // -----------------
+
+        function attemptToJoinRoom(nickname, roomName, password = "") {
+            if (!nickname) { alert("닉네임을 입력해주세요."); return; }
+            if (!roomName) { alert("방 이름을 입력해주세요."); return; }
+            socket.emit('join', { nickname, room_name: roomName, password });
+        }
+
+        createJoinBtn.addEventListener('click', () => {
+            attemptToJoinRoom(nicknameInput.value.trim(), roomNameInput.value.trim(), passwordInput.value);
+        });
+
+        socket.on('update_room_list', (rooms) => {
+            roomList.innerHTML = "";
+            rooms.forEach(room => {
+                const li = document.createElement('li');
+                li.dataset.roomName = room.name;
+                li.dataset.hasPassword = room.has_password;
+                
+                const roomInfo = document.createElement('div');
+                roomInfo.className = 'room-info';
+                roomInfo.innerHTML = `<span>${room.name}</span><span>(${room.user_count}명)</span>`;
+                li.appendChild(roomInfo);
+
+                if (room.has_password) {
+                    const lockIcon = document.createElement('span');
+                    lockIcon.className = 'lock-icon';
+                    lockIcon.textContent = '🔒';
+                    li.appendChild(lockIcon);
+                }
+
+                li.addEventListener('click', () => {
+                    const nickname = nicknameInput.value.trim();
+                    if (!nickname) { alert("먼저 닉네임을 입력해주세요."); return; }
+                    let password = "";
+                    if (room.has_password) {
+                        password = prompt(`'${room.name}' 방의 비밀번호를 입력하세요.`);
+                        if (password === null) return;
+                    }
+                    attemptToJoinRoom(nickname, room.name, password);
+                });
+                roomList.appendChild(li);
+            });
+        });
+
+        socket.on('join_failed', (data) => alert(data.message));
+
+        socket.on('join_success', async (data) => {
+            currentRoomName = data.room;
+            myNickname = data.nickname;
+            lobby.style.display = 'none';
+            meetingRoom.style.display = 'flex';
+            roomNameDisplay.textContent = currentRoomName;
+            myNicknameDisplay.textContent = `${myNickname} (나)`;
+            data.existing_users.forEach(user => { peerNicknames[user.sid] = user.nickname; });
+
+            try {
+                myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                myVideo.srcObject = myStream;
+                isStreamReady = true;
+
+                if (pendingPeers.length > 0) {
+                    pendingPeers.forEach(peerSid => handleUserJoined({ sid: peerSid }));
+                    pendingPeers = [];
+                }
+                if (pendingOffers.length > 0) {
+                    pendingOffers.forEach(offerData => handleOffer(offerData));
+                    pendingOffers = [];
+                }
+            } catch (e) {
+                console.error("미디어 장치 접근 오류:", e);
+                alert("카메라/마이크 접근 권한을 허용해주세요.");
+            }
+        });
+
+        // -----------------
+        // 3. WebRTC 및 시그널링 로직
+        // -----------------
+
+        socket.on('user-joined', (data) => {
+            peerNicknames[data.sid] = data.nickname;
+            if (!isStreamReady) {
+                pendingPeers.push(data.sid);
+                return;
+            }
+            handleUserJoined(data);
+        });
+
+        async function handleUserJoined({ sid }) {
+            const pc = createPeerConnection(sid);
+            if (!pc) return;
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('offer', { target_sid: sid, from_sid: socket.id, offer });
+        }
+
+        socket.on('offer', (data) => {
+            if (!isStreamReady) {
+                pendingOffers.push(data);
+                return;
+            }
+            handleOffer(data);
+        });
+
+        async function handleOffer(data) {
+            const pc = createPeerConnection(data.from_sid);
+            if (!pc) return;
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('answer', { target_sid: data.from_sid, from_sid: socket.id, answer });
+        }
+
+        socket.on('answer', async (data) => {
+            const pc = peerConnections[data.from_sid];
+            if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        });
+
+        socket.on('ice-candidate', (data) => {
+            const pc = peerConnections[data.from_sid];
+            if (pc) pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        });
+
+        socket.on('user-left', (data) => {
+            const nickname = peerNicknames[data.sid] || '누군가';
+            console.log(`${nickname}님이 퇴장했습니다.`);
+            if (peerConnections[data.sid]) {
+                peerConnections[data.sid].close();
+                delete peerConnections[data.sid];
+            }
+            delete peerNicknames[data.sid];
+            const videoElement = document.getElementById(`video-${data.sid}`);
+            if (videoElement) videoElement.parentElement.remove();
+        });
+
+        function createPeerConnection(sid) {
+            if (!myStream) return null;
+            const pc = new RTCPeerConnection(configuration);
+            peerConnections[sid] = pc;
+            myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
+            pc.onicecandidate = (event) => {
+                if (event.candidate) socket.emit('ice-candidate', { target_sid: sid, from_sid: socket.id, candidate: event.candidate });
+            };
+            pc.ontrack = (event) => {
+                let videoElement = document.getElementById(`video-${sid}`);
+                if (!videoElement) {
+                    const videoWrapper = document.createElement('div');
+                    videoWrapper.className = 'video-wrapper';
+                    videoElement = document.createElement('video');
+                    videoElement.id = `video-${sid}`;
+                    videoElement.autoplay = true;
+                    videoElement.playsInline = true;
+                    const nameTag = document.createElement('p');
+                    nameTag.textContent = peerNicknames[sid] || sid.substring(0, 5);
+                    videoWrapper.appendChild(videoElement);
+                    videoWrapper.appendChild(nameTag);
+                    videoContainer.appendChild(videoWrapper);
+                }
+                videoElement.srcObject = event.streams[0];
+            };
+            return pc;
+        }
+
+        // -----------------
+        // 4. 부가 기능 (채팅, 미디어 제어)
+        // -----------------
+        socket.on('chat', (data) => {
+            const item = document.createElement('li');
+            item.textContent = data.message;
+            item.className = data.from_sid === socket.id ? 'my-chat' : 'other-chat';
+            if(data.from_sid !== socket.id){
+                const nameItem = document.createElement('li');
+                nameItem.textContent = data.nickname;
+                nameItem.className = 'other-chat-pn';
+                chatMessages.appendChild(nameItem);
+            }
+            chatMessages.appendChild(item);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = chatInput.value;
+            if (message && currentRoomName) {
+                socket.emit('chat', { room: currentRoomName, message: message });
+                chatInput.value = '';
+            }
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if (!myStream) return;
+            isMuted = !isMuted;
+            myStream.getAudioTracks()[0].enabled = !isMuted;
+            muteBtn.textContent = isMuted ? '음소거 해제' : '음소거';
+            muteBtn.classList.toggle('off', isMuted);
+});
+
+        cameraBtn.addEventListener('click', () => {
+            if (!myStream) return;
+            isCameraOff = !isCameraOff;
+            myStream.getVideoTracks()[0].enabled = !isCameraOff;
+            cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기';
+            cameraBtn.classList.toggle('off', isCameraOff);
+        });
+
+        shareScreenBtn.addEventListener('click', async () => {
+            if (!myStream) return;
+            if (isScreenSharing) {
+                const newWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                const newWebcamTrack = newWebcamStream.getVideoTracks()[0];
+                myVideo.srcObject = new MediaStream([newWebcamTrack, myStream.getAudioTracks()[0]]);
+                myStream.getVideoTracks()[0].stop();
+                myStream.removeTrack(myStream.getVideoTracks()[0]);
+                myStream.addTrack(newWebcamTrack);
+                for (const sid in peerConnections) {
+                    const sender = peerConnections[sid].getSenders().find(s => s.track && s.track.kind === 'video');
+                    if (sender) await sender.replaceTrack(newWebcamTrack);
+                }
+                shareScreenBtn.textContent = '화면 공유';
+                isScreenSharing = false;
+            } else {
+                try {
+                    const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    const screenTrack = screenStream.getVideoTracks()[0];
+                    myVideo.srcObject = new MediaStream([screenTrack, myStream.getAudioTracks()[0]]);
+                    const currentVideoTrack = myStream.getVideoTracks()[0];
+                    myStream.removeTrack(currentVideoTrack);
+                    myStream.addTrack(screenTrack);
+                    for (const sid in peerConnections) {
+                        const sender = peerConnections[sid].getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) await sender.replaceTrack(screenTrack);
+                    }
+                    screenTrack.onended = () => {
+                        if (isScreenSharing) shareScreenBtn.click();
+                    };
+                    shareScreenBtn.textContent = '공유 중지';
+                    isScreenSharing = true;
+                } catch (e) { console.error("화면 공유 실패:", e); }
+            }
+        });
+    </script>
+</body>
+</html>
