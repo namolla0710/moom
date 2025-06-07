@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moom (New Flow)</title>
+    <title>Moom 1.0.0</title>
     <style>
         :root {
             --primary-bg: #2c2f33; --secondary-bg: #23272a; --tertiary-bg: #40444b;
@@ -45,9 +45,49 @@
         #my-video-wrapper { border: 2px solid var(--primary-accent); }
         #chat-container { flex: 1; display: flex; flex-direction: column; background-color: var(--secondary-bg); padding: 10px; min-width: 300px; }
         #chat-messages { flex-grow: 1; overflow-y: auto; list-style-type: none; padding: 10px; border: 1px solid var(--tertiary-bg); margin-bottom: 10px; }
-        #chat-messages li { word-break: break-all; margin-bottom: 8px; }
-        .other-chat-pn { text-align: left; padding-left: 0.5em; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted); }
-        .system-message { text-align: center; color: var(--system-message); font-style: italic; font-size: 0.9em; }
+        #chat-messages li:not(.other-chat-pn) { word-break: break-all; margin-bottom: 8px; }
+        .my-chat { 
+            text-align: right;
+            background-color: var(--primary-accent);
+            min-height: 2em;
+            border-radius: 0.5em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
+            padding-right: 1em;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        .other-chat {
+            text-align: left;
+            background-color: var(--tertiary-bg);
+            min-height: 2em;
+            border-radius: 0.5em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
+            padding-left: 1em;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .other-chat-pn {
+            text-align: left;
+            padding-left: 0.5em;
+            margin-bottom: 0;
+        }
+        .system-message {
+            text-align: center;
+            color: var(--system-message);
+            font-size: 0.9em;
+            background-color: var(--tertiary-bg);
+
+            padding-left: 1em;
+            padding-right: 1em;
+            padding-top: 0.5em;
+            padding-bottom: 0.5em;
+
+            border-radius: 0.25em;
+        }
         #chat-form { display: flex; }
         #chat-input { flex-grow: 1; border: none; padding: 10px; background-color: var(--tertiary-bg); color: var(--text-light); border-radius: 5px 0 0 5px; }
         #chat-form button { border: none; background-color: var(--primary-accent); color: white; padding: 0 15px; border-radius: 0 5px 5px 0; cursor: pointer; }
