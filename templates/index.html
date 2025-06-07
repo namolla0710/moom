@@ -167,205 +167,213 @@
     <script>
      const socket = io({ transports: ['websocket'] });
 
-        // DOM 요소
-        const lobby = document.getElementById('lobby'), meetingRoom = document.getElementById('meeting-room');
-        const showCreateRoomBtn = document.getElementById('show-create-room-btn'), roomList = document.getElementById('room-list');
-        const totalUsersCount = document.getElementById('total-users-count');
-        const roomNameDisplay = document.getElementById('room-name-display'), myNicknameDisplay = document.getElementById('my-nickname-display');
-        const roomUserCount = document.getElementById('room-user-count'), roomPwDisplay = document.getElementById('room-pw-display');
-        const videoContainer = document.getElementById('video-container'), myVideo = document.getElementById('my-video');
-        const muteBtn = document.getElementById('mute-btn'), cameraBtn = document.getElementById('camera-btn');
-        const shareScreenBtn = document.getElementById('share-screen-btn'), changeNicknameBtn = document.getElementById('change-nickname-btn');
-        const chatForm = document.getElementById('chat-form'), chatMessages = document.getElementById('chat-messages');
-        const chatInput = document.getElementById('chat-input'); // ✨ 버그 수정: 누락된 변수 선언 추가
-        const myMuteIcon = document.getElementById('my-mute-icon'), myCameraOffIcon = document.getElementById('my-camera-off-icon');
-        const preJoinModal = document.getElementById('pre-join-modal'), preJoinForm = document.getElementById('pre-join-form');
-        const previewVideo = document.getElementById('preview-video'), modalNicknameInput = document.getElementById('modal-nickname-input');
-        const modalRoomNameInput = document.getElementById('modal-room-name-input'), modalPasswordInput = document.getElementById('modal-password-input');
-        const previewMuteCheck = document.getElementById('preview-mute-check'), previewCameraOffCheck = document.getElementById('preview-camera-off-check');
-        const leaveRoomBtn = document.getElementById('leave-room-btn');
-        
-        // 상태 변수
-        let myStream, localPreviewStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
-        let peerMediaStatus = {};
-        let isMuted = false, isCameraOff = false, isScreenSharing = false;
+    // DOM 요소
+    const lobby = document.getElementById('lobby'), meetingRoom = document.getElementById('meeting-room');
+    const showCreateRoomBtn = document.getElementById('show-create-room-btn'), roomList = document.getElementById('room-list');
+    const totalUsersCount = document.getElementById('total-users-count');
+    const roomNameDisplay = document.getElementById('room-name-display'), myNicknameDisplay = document.getElementById('my-nickname-display');
+    const roomUserCount = document.getElementById('room-user-count'), roomPwDisplay = document.getElementById('room-pw-display');
+    const videoContainer = document.getElementById('video-container'), myVideo = document.getElementById('my-video');
+    const muteBtn = document.getElementById('mute-btn'), cameraBtn = document.getElementById('camera-btn');
+    const shareScreenBtn = document.getElementById('share-screen-btn'), changeNicknameBtn = document.getElementById('change-nickname-btn');
+    const chatForm = document.getElementById('chat-form'), chatInput = document.getElementById('chat-input'), chatMessages = document.getElementById('chat-messages');
+    const myMuteIcon = document.getElementById('my-mute-icon'), myCameraOffIcon = document.getElementById('my-camera-off-icon');
+    const preJoinModal = document.getElementById('pre-join-modal'), preJoinForm = document.getElementById('pre-join-form');
+    const previewVideo = document.getElementById('preview-video'), modalNicknameInput = document.getElementById('modal-nickname-input');
+    const modalRoomNameInput = document.getElementById('modal-room-name-input'), modalPasswordInput = document.getElementById('modal-password-input');
+    const previewMuteCheck = document.getElementById('preview-mute-check'), previewCameraOffCheck = document.getElementById('preview-camera-off-check');
+    const leaveRoomBtn = document.getElementById('leave-room-btn');
+    
+    // 상태 변수
+    let myStream, localPreviewStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
+    let peerMediaStatus = {};
+    let isMuted = false, isCameraOff = false, isScreenSharing = false;
 
-        const configuration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' } ] };
+    const configuration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' } ] };
 
-        // --- 로비 & 입장 전 설정 모달 로직 ---
-
-        async function openPreJoinModal(mode, roomData = {}) {
-            preJoinModal.style.display = 'flex';
-            document.getElementById('modal-title').textContent = mode === 'create' ? '새로운 방 만들기' : `'${roomData.name}' 방 입장`;
-            modalRoomNameInput.value = roomData.name || '';
-            modalRoomNameInput.readOnly = (mode === 'join');
-            modalPasswordInput.style.display = (mode === 'create' || roomData.hasPassword) ? 'block' : 'none';
-            modalPasswordInput.value = '';
-            try {
-                localPreviewStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                previewVideo.srcObject = localPreviewStream;
-            } catch (e) {
-                alert("카메라/마이크를 찾을 수 없거나 접근 권한이 없습니다.");
-                closePreJoinModal();
-            }
-        }
-
-        function closePreJoinModal() {
-            if (localPreviewStream) {
-                localPreviewStream.getTracks().forEach(track => track.stop());
-                localPreviewStream = null;
-            }
-            preJoinModal.style.display = 'none';
-        }
-
-        showCreateRoomBtn.addEventListener('click', () => openPreJoinModal('create'));
-
-        preJoinForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const nickname = modalNicknameInput.value.trim();
-            const roomName = modalRoomNameInput.value.trim();
-            const password = modalPasswordInput.value;
-            if (!nickname || !roomName) { alert("닉네임과 방 이름을 모두 입력해야 합니다."); return; }
-            isMuted = previewMuteCheck.checked;
-            isCameraOff = previewCameraOffCheck.checked;
-            myStream = localPreviewStream;
-            localPreviewStream = null; 
-            myStream.getAudioTracks()[0].enabled = !isMuted;
-            myStream.getVideoTracks()[0].enabled = !isCameraOff;
+    // --- 로비 & 입장 전 설정 모달 로직 ---
+    async function openPreJoinModal(mode, roomData = {}) {
+        preJoinModal.style.display = 'flex';
+        document.getElementById('modal-title').textContent = mode === 'create' ? '새로운 방 만들기' : `'${roomData.name}' 방 입장`;
+        modalRoomNameInput.value = roomData.name || '';
+        modalRoomNameInput.readOnly = (mode === 'join');
+        modalPasswordInput.style.display = (mode === 'create' || roomData.hasPassword) ? 'block' : 'none';
+        modalPasswordInput.value = '';
+        try {
+            localPreviewStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            previewVideo.srcObject = localPreviewStream;
+        } catch (e) {
+            alert("카메라/마이크를 찾을 수 없거나 접근 권한이 없습니다.");
             closePreJoinModal();
-            socket.emit('join', { nickname, room_name: roomName, password });
-        });
-        
-        // --- 서버 이벤트 핸들러 ---
-        
-        socket.on('update_stats', (data) => {
-            totalUsersCount.textContent = data.total_users;
-            roomList.innerHTML = "";
-            data.rooms.forEach(room => {
-                const li = document.createElement('li');
-                li.innerHTML = `<div class="room-info"><span>${room.name}</span><span>(${room.user_count}명)</span></div>` + (room.has_password ? `<span class="lock-icon">🔒</span>` : '');
-                li.addEventListener('click', () => {
-                    openPreJoinModal('join', { name: room.name, hasPassword: room.has_password });
-                });
-                roomList.appendChild(li);
-            });
-        });
+        }
+    }
 
-        socket.on('join_failed', (data) => alert(data.message));
-        
-        socket.on('join_success', (data) => {
-            currentRoomName = data.room; myNickname = data.nickname;
-            lobby.style.display = 'none'; meetingRoom.style.display = 'flex';
-            roomNameDisplay.textContent = currentRoomName;
-            myNicknameDisplay.textContent = `${myNickname} (나)`;
-            roomPwDisplay.textContent = data.room_password || '없음';
-            myVideo.srcObject = myStream;
-            muteBtn.textContent = isMuted ? '음소거 해제' : '음소거'; muteBtn.classList.toggle('off', isMuted);
-            cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기'; cameraBtn.classList.toggle('off', isCameraOff);
-            myMuteIcon.style.display = isMuted ? 'block' : 'none';
-            myCameraOffIcon.style.display = isCameraOff ? 'block' : 'none';
-            socket.emit('media_status_change', { room: currentRoomName, mediaType: 'audio', status: isMuted });
-            socket.emit('media_status_change', { room: currentRoomName, mediaType: 'video', status: isCameraOff });
-            data.existing_users.forEach(user => {
-                peerNicknames[user.sid] = user.nickname;
-                handleUserJoined(user);
-            });
-        });
+    function closePreJoinModal() {
+        if (localPreviewStream) {
+            localPreviewStream.getTracks().forEach(track => track.stop());
+            localPreviewStream = null;
+        }
+        preJoinModal.style.display = 'none';
+    }
 
-        // --- WebRTC 및 시그널링 로직 ---
-        socket.on('user-joined-info', (data) => {
-            if (peerConnections[data.sid]) return;
-            peerNicknames[data.sid] = data.nickname;
-            handleUserJoined(data);
+    showCreateRoomBtn.addEventListener('click', () => openPreJoinModal('create'));
+
+    preJoinForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const nickname = modalNicknameInput.value.trim();
+        const roomName = modalRoomNameInput.value.trim();
+        const password = modalPasswordInput.value;
+        if (!nickname || !roomName) { alert("닉네임과 방 이름을 모두 입력해야 합니다."); return; }
+        isMuted = previewMuteCheck.checked;
+        isCameraOff = previewCameraOffCheck.checked;
+        myStream = localPreviewStream;
+        localPreviewStream = null; 
+        myStream.getAudioTracks()[0].enabled = !isMuted;
+        myStream.getVideoTracks()[0].enabled = !isCameraOff;
+        closePreJoinModal();
+        socket.emit('join', { nickname, room_name: roomName, password });
+    });
+    
+    // --- 서버 이벤트 핸들러 ---
+    socket.on('update_stats', (data) => {
+        totalUsersCount.textContent = data.total_users;
+        roomList.innerHTML = "";
+        data.rooms.forEach(room => {
+            const li = document.createElement('li');
+            li.innerHTML = `<div class="room-info"><span>${room.name}</span><span>(${room.user_count}명)</span></div>` + (room.has_password ? `<span class="lock-icon">🔒</span>` : '');
+            li.addEventListener('click', () => {
+                openPreJoinModal('join', { name: room.name, hasPassword: room.has_password });
+            });
+            roomList.appendChild(li);
         });
-        
-        async function handleUserJoined({ sid }) {
+    });
+
+    socket.on('join_failed', (data) => alert(data.message));
+    
+    socket.on('join_success', (data) => {
+        currentRoomName = data.room; myNickname = data.nickname;
+        lobby.style.display = 'none'; meetingRoom.style.display = 'flex';
+        roomNameDisplay.textContent = currentRoomName;
+        myNicknameDisplay.textContent = `${myNickname} (나)`;
+        roomPwDisplay.textContent = data.room_password || '없음';
+        myVideo.srcObject = myStream;
+        muteBtn.textContent = isMuted ? '음소거 해제' : '음소거'; muteBtn.classList.toggle('off', isMuted);
+        cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기'; cameraBtn.classList.toggle('off', isCameraOff);
+        myMuteIcon.style.display = isMuted ? 'block' : 'none';
+        myCameraOffIcon.style.display = isCameraOff ? 'block' : 'none';
+        socket.emit('media_status_change', { room: currentRoomName, mediaType: 'audio', status: isMuted });
+        socket.emit('media_status_change', { room: currentRoomName, mediaType: 'video', status: isCameraOff });
+        data.existing_users.forEach(user => {
+            peerNicknames[user.sid] = user.nickname;
+            handleUserJoined(user);
+        });
+    });
+
+    // --- WebRTC 및 시그널링 로직 ---
+    socket.on('user-joined-info', (data) => {
+        if (peerConnections[data.sid]) return;
+        peerNicknames[data.sid] = data.nickname;
+        handleUserJoined(data);
+    });
+    
+    // ✨✨✨ 버그 수정: 역할 분담 로직 추가 ✨✨✨
+    async function handleUserJoined({ sid }) {
+        // 내 ID가 상대방 ID보다 "작을" 경우에만 Offer를 보내는 규칙을 정함
+        // 이렇게 하면 두 클라이언트 중 한 명만 Offer를 보내게 되어 충돌(glare)을 막음
+        if (socket.id < sid) {
+            console.log(`[WebRTC] 역할분담: 내가 Offer를 보냅니다. 대상: ${sid}`);
             const pc = createPeerConnection(sid);
             if (!pc) return;
             try {
-                if (pc.signalingState !== 'stable') return;
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 socket.emit('offer', { target_sid: sid, from_sid: socket.id, offer });
             } catch (error) { console.error("Offer 생성 오류:", error); }
+        } else {
+            console.log(`[WebRTC] 역할분담: 나는 Offer를 기다립니다. 상대: ${sid}`);
         }
+    }
 
-        socket.on('offer', async (data) => {
-            const pc = createPeerConnection(data.from_sid);
-            if (!pc) return;
+    socket.on('offer', async (data) => {
+        const pc = createPeerConnection(data.from_sid);
+        if (!pc) return;
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            socket.emit('answer', { target_sid: data.from_sid, from_sid: socket.id, answer });
+        } catch (error) { console.error("Answer 생성 오류:", error); }
+    });
+
+    // ✨✨✨ 버그 수정: Answer 적용 전 상태 확인 로직 추가 ✨✨✨
+    socket.on('answer', async (data) => {
+        const pc = peerConnections[data.from_sid];
+        // Answer를 적용하기 전, 반드시 상태가 'have-local-offer'인지 확인
+        if (pc && pc.signalingState === 'have-local-offer') {
             try {
-                await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-                const answer = await pc.createAnswer();
-                await pc.setLocalDescription(answer);
-                socket.emit('answer', { target_sid: data.from_sid, from_sid: socket.id, answer });
-            } catch (error) { console.error("Answer 생성 오류:", error); }
-        });
-
-        socket.on('answer', async (data) => {
-            const pc = peerConnections[data.from_sid];
-            // ✨ 버그 수정: Answer를 적용하기 전, 반드시 상태를 확인
-            if (pc && pc.signalingState === 'have-local-offer') {
-                try {
-                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-                } catch (error) {
-                    console.error("Answer 적용 오류:", error);
-                }
-            } else {
-                console.warn(`잘못된 상태(${pc?.signalingState})에서 Answer를 수신하여 무시합니다.`);
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            } catch(e) {
+                console.error("Answer 적용 중 오류:", e);
             }
-        });
-
-        socket.on('ice-candidate', (data) => {
-            const pc = peerConnections[data.from_sid];
-            if (pc) pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-        });
-
-        socket.on('user-left', (data) => {
-            if (peerConnections[data.sid]) {
-                peerConnections[data.sid].close();
-                delete peerConnections[data.sid];
-            }
-            delete peerNicknames[data.sid];
-            delete peerMediaStatus[data.sid];
-            const videoWrapper = document.getElementById(`video-wrapper-${data.sid}`);
-            if (videoWrapper) videoWrapper.remove();
-        });
-
-        function createPeerConnection(sid) {
-            // ✨ 버그 수정: 이미 연결 객체가 있다면 새로 만들지 않고 기존 객체 반환
-            if (peerConnections[sid]) {
-                return peerConnections[sid];
-            }
-            if (!myStream) return null;
-
-            const pc = new RTCPeerConnection(configuration);
-            peerConnections[sid] = pc;
-            myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
-            pc.onicecandidate = (event) => { if (event.candidate) socket.emit('ice-candidate', { target_sid: sid, from_sid: socket.id, candidate: event.candidate }); };
-            pc.ontrack = (event) => {
-                let videoWrapper = document.getElementById(`video-wrapper-${sid}`);
-                if (!videoWrapper) {
-                    videoWrapper = document.createElement('div');
-                    videoWrapper.id = `video-wrapper-${sid}`;
-                    videoWrapper.className = 'video-wrapper';
-                    videoWrapper.innerHTML = `
-                        <video id="video-${sid}" autoplay playsinline></video>
-                        <div id="mute-icon-${sid}" class="status-icon">🔇</div>
-                        <div id="camera-off-icon-${sid}" class="status-icon">❌</div>
-                        <p>${peerNicknames[sid] || sid.substring(0, 5)}</p>
-                    `;
-                    videoContainer.appendChild(videoWrapper);
-                    if (peerMediaStatus[sid]) {
-                        const muteIcon = document.getElementById(`mute-icon-${sid}`);
-                        const cameraIcon = document.getElementById(`camera-off-icon-${sid}`);
-                        if (muteIcon) muteIcon.style.display = peerMediaStatus[sid].audio ? 'block' : 'none';
-                        if (cameraIcon) cameraIcon.style.display = peerMediaStatus[sid].video ? 'block' : 'none';
-                    }
-                }
-                document.getElementById(`video-${sid}`).srcObject = event.streams[0];
-            };
-            return pc;
+        } else {
+            console.warn(`잘못된 상태(${pc?.signalingState})에서 Answer를 수신하여 무시합니다.`);
         }
+    });
+
+    socket.on('ice-candidate', (data) => {
+        const pc = peerConnections[data.from_sid];
+        if (pc) {
+            pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(e => console.error("ICE Candidate 추가 오류:", e));
+        }
+    });
+
+    socket.on('user-left', (data) => {
+        const nickname = peerNicknames[data.sid] || '누군가';
+        if (peerConnections[data.sid]) {
+            peerConnections[data.sid].close();
+            delete peerConnections[data.sid];
+        }
+        delete peerNicknames[data.sid];
+        delete peerMediaStatus[data.sid];
+        const videoWrapper = document.getElementById(`video-wrapper-${data.sid}`);
+        if (videoWrapper) videoWrapper.remove();
+    });
+
+    // ✨✨✨ 버그 수정: 중복 생성 방지 로직 추가 ✨✨✨
+    function createPeerConnection(sid) {
+        if (peerConnections[sid]) {
+            return peerConnections[sid];
+        }
+        if (!myStream) return null;
+
+        const pc = new RTCPeerConnection(configuration);
+        peerConnections[sid] = pc;
+        myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
+        pc.onicecandidate = (event) => { if (event.candidate) socket.emit('ice-candidate', { target_sid: sid, from_sid: socket.id, candidate: event.candidate }); };
+        pc.ontrack = (event) => {
+            let videoWrapper = document.getElementById(`video-wrapper-${sid}`);
+            if (!videoWrapper) {
+                videoWrapper = document.createElement('div');
+                videoWrapper.id = `video-wrapper-${sid}`;
+                videoWrapper.className = 'video-wrapper';
+                videoWrapper.innerHTML = `
+                    <video id="video-${sid}" autoplay playsinline></video>
+                    <div id="mute-icon-${sid}" class="status-icon">🔇</div>
+                    <div id="camera-off-icon-${sid}" class="status-icon">❌</div>
+                    <p>${peerNicknames[sid] || sid.substring(0, 5)}</p>
+                `;
+                videoContainer.appendChild(videoWrapper);
+                if (peerMediaStatus[sid]) {
+                    const muteIcon = document.getElementById(`mute-icon-${sid}`);
+                    const cameraIcon = document.getElementById(`camera-off-icon-${sid}`);
+                    if (muteIcon) muteIcon.style.display = peerMediaStatus[sid].audio ? 'block' : 'none';
+                    if (cameraIcon) cameraIcon.style.display = peerMediaStatus[sid].video ? 'block' : 'none';
+                }
+            }
+            document.getElementById(`video-${sid}`).srcObject = event.streams[0];
+        };
+        return pc;
+    }
 
         // --- 기타 기능 로직 ---
         changeNicknameBtn.addEventListener('click', () => {
