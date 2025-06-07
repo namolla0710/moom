@@ -118,15 +118,23 @@
         const socket = io({ transports: ['websocket'] });
 
         // DOM 요소
-        const lobby = document.getElementById('lobby'), meetingRoom = document.getElementById('meeting-room');
-        const nicknameInput = document.getElementById('nickname-input'), roomNameInput = document.getElementById('room-name-input');
-        const createJoinBtn = document.getElementById('create-join-btn'), roomList = document.getElementById('room-list');
-        const roomNameDisplay = document.getElementById('room-name-display'), myNicknameDisplay = document.getElementById('my-nickname-display');
-        const videoContainer = document.getElementById('video-container'), myVideo = document.getElementById('my-video');
-        const muteBtn = document.getElementById('mute-btn'), cameraBtn = document.getElementById('camera-btn');
-        const shareScreenBtn = document.getElementById('share-screen-btn'), changeNicknameBtn = document.getElementById('change-nickname-btn');
-        const chatForm = document.getElementById('chat-form'), chatInput = document.getElementById('chat-input'), chatMessages = document.getElementById('chat-messages');
-        const myMuteIcon = document.getElementById('my-mute-icon'), myCameraOffIcon = document.getElementById('my-camera-off-icon');
+        const lobby = document.getElementById('lobby');
+        const nicknameInput = document.getElementById('nickname-input');
+        const roomNameInput = document.getElementById('room-name-input');
+        const passwordInput = document.getElementById('password-input');
+        const createJoinBtn = document.getElementById('create-join-btn');
+        const roomList = document.getElementById('room-list');
+        const meetingRoom = document.getElementById('meeting-room');
+        const roomNameDisplay = document.getElementById('room-name-display');
+        const myNicknameDisplay = document.getElementById('my-nickname-display');
+        const videoContainer = document.getElementById('video-container');
+        const myVideo = document.getElementById('my-video');
+        const muteBtn = document.getElementById('mute-btn');
+        const cameraBtn = document.getElementById('camera-btn');
+        const shareScreenBtn = document.getElementById('share-screen-btn');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
 
         // 상태 변수
         let myStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
