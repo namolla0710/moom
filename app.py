@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, rooms
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'this-is-the-final-super-secret-key'
+app.config['SECRET_KEY'] = 'this-is-the-truly-final-super-secret-key-v2'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # 구조: {'room_name': {'password': '123', 'users': {'sid1': 'Alice', 'sid2': 'Bob'}}}
@@ -122,7 +122,6 @@ def handle_chat(data):
         sender_nickname = active_rooms[room]['users'][request.sid]
         emit('chat', { 'from_sid': request.sid, 'nickname': sender_nickname, 'message': data.get('message') }, to=room)
 
-# WebRTC 시그널링 핸들러
 @socketio.on('offer')
 def handle_offer(data): emit('offer', data, to=data.get('target_sid'))
 @socketio.on('answer')

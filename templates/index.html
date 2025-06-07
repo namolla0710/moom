@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moom (Bug Fixed)</title>
+    <title>Moom (New Flow)</title>
     <style>
         :root {
             --primary-bg: #2c2f33; --secondary-bg: #23272a; --tertiary-bg: #40444b;
@@ -12,17 +12,30 @@
         }
         body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--primary-bg); color: var(--text-light); margin: 0; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; }
         
+        /* --- 로비 스타일 --- */
         #lobby { text-align: center; width: 90%; max-width: 900px; }
         #server-stats { margin-bottom: 20px; color: var(--text-muted); }
-        .lobby-container { display: flex; justify-content: space-around; margin-top: 20px; gap: 40px; }
-        #room-list-container, #create-room-form { background-color: var(--secondary-bg); padding: 25px; border-radius: 8px; flex: 1; }
+        .lobby-container { display: flex; flex-direction: column; margin-top: 20px; gap: 20px; align-items: center; }
+        #room-list-container { background-color: var(--secondary-bg); padding: 25px; border-radius: 8px; width: 100%; max-width: 600px; }
+        #show-create-room-btn { font-size: 1.2em; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; background-color: var(--primary-accent); color: var(--text-light); margin-top: 20px; }
         h1 { font-size: 2.5em; color: var(--primary-accent); }
         h2 { margin-top: 0; border-bottom: 1px solid var(--tertiary-bg); padding-bottom: 15px; }
         #room-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
         #room-list li { background-color: var(--tertiary-bg); margin-bottom: 10px; padding: 15px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
-        #create-room-form input { display: block; width: calc(100% - 22px); font-size: 1.1em; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #555; background-color: var(--primary-bg); color: var(--text-light); }
-        #create-join-btn { width: 100%; font-size: 1.2em; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; background-color: var(--primary-accent); color: var(--text-light); }
-        
+        #room-list li:hover { background-color: #555b62; }
+
+        /* --- 입장 전 설정 모달 스타일 --- */
+        #pre-join-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        #modal-content { background-color: var(--secondary-bg); padding: 30px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; gap: 15px; max-width: 500px; width: 90%;}
+        #preview-video { width: 100%; max-height: 300px; background-color: #000; border-radius: 8px; transform: scaleX(-1); }
+        #pre-join-form { width: 100%; }
+        #pre-join-form input[type="text"], #pre-join-form input[type="password"] { display: block; width: calc(100% - 22px); font-size: 1.1em; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #555; background-color: var(--primary-bg); color: var(--text-light); }
+        #pre-join-form input[readonly] { background-color: var(--tertiary-bg); cursor: not-allowed; }
+        #modal-media-controls { display: flex; justify-content: center; gap: 20px; margin-bottom: 20px; }
+        #modal-media-controls label { cursor: pointer; }
+        #final-join-btn { width: 100%; font-size: 1.2em; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; background-color: var(--primary-accent); color: var(--text-light); }
+
+        /* --- 회의실 스타일 --- */
         #meeting-room { display: none; width: 100%; height: 100%; flex-direction: column; }
         #header { padding: 10px; background-color: var(--secondary-bg); text-align: center; font-size: 1.2em; }
         #header span { font-weight: bold; color: var(--primary-accent); }
@@ -44,8 +57,10 @@
         #controls { text-align: center; padding: 15px; background-color: var(--secondary-bg); }
         #controls button { background-color: var(--primary-accent); color: white; border: none; padding: 10px 15px; margin: 0 5px; border-radius: 5px; cursor: pointer; font-size: 1em; }
         #controls button.off { background-color: var(--danger-accent); }
+        
         @media (max-width: 768px) {
             .lobby-container, .main-container { flex-direction: column; }
+            .lobby-container { gap: 20px; }
             #video-container { min-height: 50vh; }
             #chat-container { min-width: unset; width: 100%; flex: 1; }
             h1 { font-size: 2em; }
@@ -61,13 +76,24 @@
                 <h2>활성화된 방 목록</h2>
                 <ul id="room-list"></ul>
             </div>
-            <div id="create-room-form">
-                <h2>새로운 방 만들기 / 입장</h2>
-                <input id="nickname-input" type="text" placeholder="사용할 닉네임을 입력하세요" required>
-                <input id="room-name-input" type="text" placeholder="방 이름을 입력하세요" required>
-                <input id="password-input" type="password" placeholder="비밀번호 (없으면 공개 방)">
-                <button id="create-join-btn">입장하기</button>
-            </div>
+            <button id="show-create-room-btn">새로운 방 만들기</button>
+        </div>
+    </div>
+
+    <div id="pre-join-modal">
+        <div id="modal-content">
+            <h3 id="modal-title">입장 준비</h3>
+            <video id="preview-video" autoplay muted></video>
+            <form id="pre-join-form">
+                <input id="modal-nickname-input" type="text" placeholder="사용할 닉네임을 입력하세요" required>
+                <input id="modal-room-name-input" type="text" placeholder="방 이름을 입력하세요" required>
+                <input id="modal-password-input" type="password" placeholder="비밀번호 (필요시 입력)">
+                <div id="modal-media-controls">
+                    <label><input type="checkbox" id="preview-mute-check"> 🎤 음소거</label>
+                    <label><input type="checkbox" id="preview-camera-off-check"> 📷 카메라 끄기</label>
+                </div>
+                <button type="submit" id="final-join-btn">회의실 입장</button>
+            </form>
         </div>
     </div>
 
@@ -104,8 +130,7 @@
 
         // DOM 요소
         const lobby = document.getElementById('lobby'), meetingRoom = document.getElementById('meeting-room');
-        const nicknameInput = document.getElementById('nickname-input'), roomNameInput = document.getElementById('room-name-input'), passwordInput = document.getElementById('password-input');
-        const createJoinBtn = document.getElementById('create-join-btn'), roomList = document.getElementById('room-list');
+        const showCreateRoomBtn = document.getElementById('show-create-room-btn'), roomList = document.getElementById('room-list');
         const totalUsersCount = document.getElementById('total-users-count');
         const roomNameDisplay = document.getElementById('room-name-display'), myNicknameDisplay = document.getElementById('my-nickname-display');
         const roomUserCount = document.getElementById('room-user-count'), roomPwDisplay = document.getElementById('room-pw-display');
@@ -114,21 +139,74 @@
         const shareScreenBtn = document.getElementById('share-screen-btn'), changeNicknameBtn = document.getElementById('change-nickname-btn');
         const chatForm = document.getElementById('chat-form'), chatMessages = document.getElementById('chat-messages');
         const myMuteIcon = document.getElementById('my-mute-icon'), myCameraOffIcon = document.getElementById('my-camera-off-icon');
+        const preJoinModal = document.getElementById('pre-join-modal'), preJoinForm = document.getElementById('pre-join-form');
+        const previewVideo = document.getElementById('preview-video'), modalNicknameInput = document.getElementById('modal-nickname-input');
+        const modalRoomNameInput = document.getElementById('modal-room-name-input'), modalPasswordInput = document.getElementById('modal-password-input');
+        const previewMuteCheck = document.getElementById('preview-mute-check'), previewCameraOffCheck = document.getElementById('preview-camera-off-check');
 
         // 상태 변수
-        let myStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
-        let peerMediaStatus = {}; // ✨ 다른 사용자들의 미디어 상태를 저장할 객체
+        let myStream, localPreviewStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
+        let peerMediaStatus = {};
         let isMuted = false, isCameraOff = false, isScreenSharing = false;
 
         const configuration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' } ] };
 
-        // --- 로비 로직 ---
-        function attemptToJoinRoom(nickname, roomName, password = "") {
-            if (!nickname) { alert("닉네임을 입력해주세요."); return; }
-            if (!roomName) { alert("방 이름을 입력해주세요."); return; }
-            socket.emit('join', { nickname, room_name: roomName, password });
+        // --- 로비 & 입장 전 설정 모달 로직 ---
+
+        async function openPreJoinModal(mode, roomData = {}) {
+            preJoinModal.style.display = 'flex';
+            document.getElementById('modal-title').textContent = mode === 'create' ? '새로운 방 만들기' : `'${roomData.name}' 방 입장`;
+            
+            modalRoomNameInput.value = roomData.name || '';
+            modalRoomNameInput.readOnly = (mode === 'join');
+            modalPasswordInput.style.display = (mode === 'create' || roomData.hasPassword) ? 'block' : 'none';
+            modalPasswordInput.value = '';
+            modalNicknameInput.value = '';
+            
+            try {
+                localPreviewStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                previewVideo.srcObject = localPreviewStream;
+            } catch (e) {
+                alert("카메라/마이크를 찾을 수 없거나 접근 권한이 없습니다.");
+                closePreJoinModal();
+            }
         }
-        createJoinBtn.addEventListener('click', () => { attemptToJoinRoom(nicknameInput.value.trim(), roomNameInput.value.trim(), passwordInput.value); });
+
+        function closePreJoinModal() {
+            if (localPreviewStream) {
+                localPreviewStream.getTracks().forEach(track => track.stop());
+                localPreviewStream = null;
+            }
+            preJoinModal.style.display = 'none';
+        }
+
+        showCreateRoomBtn.addEventListener('click', () => openPreJoinModal('create'));
+
+        preJoinForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const nickname = modalNicknameInput.value.trim();
+            const roomName = modalRoomNameInput.value.trim();
+            const password = modalPasswordInput.value;
+            
+            if (!nickname || !roomName) {
+                alert("닉네임과 방 이름을 모두 입력해야 합니다.");
+                return;
+            }
+
+            isMuted = previewMuteCheck.checked;
+            isCameraOff = previewCameraOffCheck.checked;
+
+            myStream = localPreviewStream;
+            localPreviewStream = null; 
+
+            myStream.getAudioTracks()[0].enabled = !isMuted;
+            myStream.getVideoTracks()[0].enabled = !isCameraOff;
+            
+            closePreJoinModal();
+            socket.emit('join', { nickname, room_name: roomName, password });
+        });
+        
+        // --- 서버 이벤트 핸들러 ---
         
         socket.on('update_stats', (data) => {
             totalUsersCount.textContent = data.total_users;
@@ -137,45 +215,40 @@
                 const li = document.createElement('li');
                 li.innerHTML = `<div class="room-info"><span>${room.name}</span><span>(${room.user_count}명)</span></div>` + (room.has_password ? `<span class="lock-icon">🔒</span>` : '');
                 li.addEventListener('click', () => {
-                    const nickname = nicknameInput.value.trim();
-                    if (!nickname) { alert("먼저 닉네임을 입력해주세요."); return; }
-                    let password = "";
-                    if (room.has_password) {
-                        password = prompt(`'${room.name}' 방의 비밀번호를 입력하세요.`);
-                        if (password === null) return;
-                    }
-                    attemptToJoinRoom(nickname, room.name, password);
+                    openPreJoinModal('join', { name: room.name, hasPassword: room.has_password });
                 });
                 roomList.appendChild(li);
             });
         });
-        
+
         socket.on('join_failed', (data) => alert(data.message));
         
-        socket.on('join_success', async (data) => {
+        socket.on('join_success', (data) => {
             currentRoomName = data.room; myNickname = data.nickname;
             lobby.style.display = 'none'; meetingRoom.style.display = 'flex';
             roomNameDisplay.textContent = currentRoomName;
             myNicknameDisplay.textContent = `${myNickname} (나)`;
             roomPwDisplay.textContent = data.room_password || '없음';
 
-            try {
-                myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                myVideo.srcObject = myStream;
-                data.existing_users.forEach(user => {
-                    peerNicknames[user.sid] = user.nickname;
-                    handleUserJoined(user);
-                });
-            } catch (e) {
-                console.error("미디어 장치 접근 오류:", e);
-                alert("카메라/마이크 접근 권한을 허용해주세요.");
-            }
+            myVideo.srcObject = myStream;
+            muteBtn.textContent = isMuted ? '음소거 해제' : '음소거'; muteBtn.classList.toggle('off', isMuted);
+            cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기'; cameraBtn.classList.toggle('off', isCameraOff);
+            myMuteIcon.style.display = isMuted ? 'block' : 'none';
+            myCameraOffIcon.style.display = isCameraOff ? 'block' : 'none';
+            
+            socket.emit('media_status_change', { room: currentRoomName, mediaType: 'audio', status: isMuted });
+            socket.emit('media_status_change', { room: currentRoomName, mediaType: 'video', status: isCameraOff });
+
+            data.existing_users.forEach(user => {
+                peerNicknames[user.sid] = user.nickname;
+                handleUserJoined(user);
+            });
         });
 
         // --- WebRTC 및 시그널링 로직 ---
         socket.on('user-joined-info', (data) => {
+            if (peerConnections[data.sid]) return; // 이미 연결 절차가 진행 중인 경우 무시
             peerNicknames[data.sid] = data.nickname;
-            // ✨ 새로운 유저가 들어오면, 그 유저에게 연결을 시작하도록 요청
             handleUserJoined(data);
         });
         
@@ -217,7 +290,7 @@
                 delete peerConnections[data.sid];
             }
             delete peerNicknames[data.sid];
-            delete peerMediaStatus[data.sid]; // ✨ 상태 정보도 함께 삭제
+            delete peerMediaStatus[data.sid];
             const videoWrapper = document.getElementById(`video-wrapper-${data.sid}`);
             if (videoWrapper) videoWrapper.remove();
         });
@@ -242,7 +315,6 @@
                     `;
                     videoContainer.appendChild(videoWrapper);
                     
-                    // ✨ UI가 생성된 후, 저장된 미디어 상태가 있다면 즉시 아이콘에 반영
                     if (peerMediaStatus[sid]) {
                         const muteIcon = document.getElementById(`mute-icon-${sid}`);
                         const cameraIcon = document.getElementById(`camera-off-icon-${sid}`);
@@ -264,6 +336,7 @@
         });
 
         socket.on('nickname_changed', (data) => {
+            const oldNickname = (data.sid === socket.id) ? myNickname : (peerNicknames[data.sid] || '누군가');
             if (data.sid === socket.id) {
                 myNickname = data.new_nickname;
                 myNicknameDisplay.textContent = `${myNickname} (나)`;
@@ -276,18 +349,14 @@
         
         socket.on('user_media_status_changed', (data) => {
             const { sid, mediaType, status } = data;
-            // ✨ 상태 정보를 먼저 객체에 저장
             if (!peerMediaStatus[sid]) peerMediaStatus[sid] = {};
             peerMediaStatus[sid][mediaType] = status;
-
-            // ✨ 그 다음에 UI 업데이트 시도
             const iconId = `${mediaType === 'audio' ? 'mute' : 'camera-off'}-icon-${sid}`;
             const icon = document.getElementById(iconId);
             if (icon) icon.style.display = status ? 'block' : 'none';
         });
 
         socket.on('room_status_update', (data) => { roomUserCount.textContent = data.user_count; });
-        
         socket.on('system_message', (data) => {
             const item = document.createElement('li');
             item.className = 'system-message';
@@ -297,25 +366,8 @@
         });
 
         // --- 부가 기능 ---
-        muteBtn.addEventListener('click', () => {
-            if (!myStream) return;
-            isMuted = !isMuted;
-            myStream.getAudioTracks()[0].enabled = !isMuted;
-            muteBtn.textContent = isMuted ? '음소거 해제' : '음소거';
-            muteBtn.classList.toggle('off', isMuted);
-            myMuteIcon.style.display = isMuted ? 'block' : 'none';
-            socket.emit('media_status_change', { room: currentRoomName, mediaType: 'audio', status: isMuted });
-        });
-
-        cameraBtn.addEventListener('click', () => {
-            if (!myStream) return;
-            isCameraOff = !isCameraOff;
-            myStream.getVideoTracks()[0].enabled = !isCameraOff;
-            cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기';
-            cameraBtn.classList.toggle('off', isCameraOff);
-            myCameraOffIcon.style.display = isCameraOff ? 'block' : 'none';
-            socket.emit('media_status_change', { room: currentRoomName, mediaType: 'video', status: isCameraOff });
-        });
+        muteBtn.addEventListener('click', () => { if (!myStream) return; isMuted = !isMuted; myStream.getAudioTracks()[0].enabled = !isMuted; muteBtn.textContent = isMuted ? '음소거 해제' : '음소거'; muteBtn.classList.toggle('off', isMuted); myMuteIcon.style.display = isMuted ? 'block' : 'none'; socket.emit('media_status_change', { room: currentRoomName, mediaType: 'audio', status: isMuted }); });
+        cameraBtn.addEventListener('click', () => { if (!myStream) return; isCameraOff = !isCameraOff; myStream.getVideoTracks()[0].enabled = !isCameraOff; cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기'; cameraBtn.classList.toggle('off', isCameraOff); myCameraOffIcon.style.display = isCameraOff ? 'block' : 'none'; socket.emit('media_status_change', { room: currentRoomName, mediaType: 'video', status: isCameraOff }); });
         
         shareScreenBtn.addEventListener('click', async () => {
             if (isScreenSharing) {
