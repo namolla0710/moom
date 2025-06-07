@@ -175,8 +175,26 @@
         let pendingOffers = [];
 
         // WebRTC STUN 서버 설정
-        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        // WebRTC STUN 및 TURN 서버 설정
+        const configuration = {
+            iceServers: [
+                // 기존 구글 STUN 서버 (계속 사용)
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
 
+                // ✨ 무료 TURN 서버 정보 추가 (연결 보장용)
+                {
+                    urls: 'turn:openrelay.metered.ca:80',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                },
+                {
+                    urls: 'turn:openrelay.metered.ca:443',
+                    username: 'openrelayproject',
+                    credential: 'openrelayproject'
+                }
+            ]
+        };
         // -----------------
         // 2. 로비 기능 관련 로직
         // -----------------
