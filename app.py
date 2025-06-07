@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, rooms
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'this-is-the-truly-final-super-secret-key-v2'
+app.config['SECRET_KEY'] = 'this-is-the-final-super-secret-key-v4-i-swear'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # 구조: {'room_name': {'password': '123', 'users': {'sid1': 'Alice', 'sid2': 'Bob'}}}
