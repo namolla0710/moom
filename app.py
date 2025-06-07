@@ -45,7 +45,7 @@ def handle_disconnect():
             print(f"🚪 {nickname}({user_sid})님이 '{room_name}' 방에서 나갔습니다.")
             
             emit('user-left', {'sid': user_sid}, to=room_name)
-            emit('system_message', {'message': f"'{nickname}'님이 퇴장했습니다."}, to=room_name)
+            emit('system_message', {'message': f"'{nickname}'님이 퇴장하셨셨습니다."}, to=room_name)
             emit('room_status_update', {'user_count': len(data['users'])}, to=room_name)
 
             if not data['users']:
@@ -84,7 +84,7 @@ def handle_join(data):
     })
     
     emit('user-joined-info', {'sid': request.sid, 'nickname': nickname}, to=room_name, skip_sid=request.sid)
-    emit('system_message', {'message': f"'{nickname}'님이 입장했습니다."}, to=room_name)
+    emit('system_message', {'message': f"'{nickname}'님이 입장하셨습니다."}, to=room_name)
     emit('room_status_update', {'user_count': len(active_rooms[room_name]['users'])}, to=room_name)
 
     print(f"👍 {nickname}({request.sid})님이 '{room_name}' 방에 성공적으로 참여했습니다.")
