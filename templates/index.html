@@ -56,35 +56,9 @@
         #chat-messages { flex-grow: 1; overflow-y: auto; border: 1px solid var(--tertiary-bg); padding: 10px; margin-bottom: 10px; list-style-type: none; }
         #chat-messages::-webkit-scrollbar { display: none; }
         #chat-messages li:not(.other-chat-pn) { margin-bottom: 8px; word-break: break-all; }
-        .my-chat { 
-            text-align: right;
-            background-color: var(--primary-accent);
-            min-height: 2em;
-            border-radius: 0.5em;
-            padding-top: 0.5em;
-            padding-bottom: 0.5em;
-            padding-right: 1em;
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-        }
-        .other-chat {
-            text-align: left;
-            background-color: var(--tertiary-bg);
-            min-height: 2em;
-            border-radius: 0.5em;
-            padding-top: 0.5em;
-            padding-bottom: 0.5em;
-            padding-left: 1em;
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-        }
-        .other-chat-pn {
-            text-align: left;
-            padding-left: 0.5em;
-            margin-bottom: 0;
-        }
+        .my-chat { text-align: right; background-color: var(--primary-accent); min-height: 2em; border-radius: 0.5em; padding: 0.5em 1em; display: flex; justify-content: flex-end; align-items: center; }
+        .other-chat { text-align: left; background-color: var(--tertiary-bg); min-height: 2em; border-radius: 0.5em; padding: 0.5em 1em; display: flex; justify-content: flex-start; align-items: center; }
+        .other-chat-pn { text-align: left; padding-left: 0.5em; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted); }
         #chat-form { display: flex; }
         #chat-input { flex-grow: 1; border: none; padding: 8px; background-color: var(--tertiary-bg); color: var(--text-light); }
         #controls { text-align: center; padding: 15px; background-color: var(--secondary-bg); }
@@ -140,7 +114,9 @@
         // -----------------
         // 1. 초기 설정 및 변수 선언
         // -----------------
-        const socket = io();
+        console.log("스크립트 시작. 서버에 연결을 시도합니다...");
+        // ✨ 배포 환경에서 안정적인 연결을 위해 웹소켓을 우선 사용하도록 명시
+        const socket = io({ transports: ['websocket'] });
 
         // DOM 요소
         const lobby = document.getElementById('lobby');
@@ -162,44 +138,26 @@
         const chatMessages = document.getElementById('chat-messages');
 
         // 상태 변수
-        let myStream;
-        let peerConnections = {};
-        let peerNicknames = {};
-        let myNickname;
-        let currentRoomName;
-        let isMuted = false;
-        let isCameraOff = false;
-        let isScreenSharing = false;
-        let isStreamReady = false;
-        let pendingPeers = [];
-        let pendingOffers = [];
+        let myStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
+        let isMuted = false, isCameraOff = false, isScreenSharing = false;
+        let isStreamReady = false, pendingPeers = [], pendingOffers = [];
 
-        // WebRTC STUN 서버 설정
         // WebRTC STUN 및 TURN 서버 설정
         const configuration = {
             iceServers: [
-                // 기존 구글 STUN 서버 (계속 사용)
                 { urls: 'stun:stun.l.google.com:19302' },
                 { urls: 'stun:stun1.l.google.com:19302' },
-
-                // ✨ 무료 TURN 서버 정보 추가 (연결 보장용)
-                {
-                    urls: 'turn:openrelay.metered.ca:80',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                },
-                {
-                    urls: 'turn:openrelay.metered.ca:443',
-                    username: 'openrelayproject',
-                    credential: 'openrelayproject'
-                }
+                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
             ]
         };
+
         // -----------------
         // 2. 로비 기능 관련 로직
         // -----------------
 
         function attemptToJoinRoom(nickname, roomName, password = "") {
+            console.log(`[Lobby] '${roomName}' 방 입장을 시도합니다. 닉네임: ${nickname}`);
             if (!nickname) { alert("닉네임을 입력해주세요."); return; }
             if (!roomName) { alert("방 이름을 입력해주세요."); return; }
             socket.emit('join', { nickname, room_name: roomName, password });
@@ -210,24 +168,22 @@
         });
 
         socket.on('update_room_list', (rooms) => {
+            console.log("[Lobby] 방 목록을 업데이트합니다.", rooms);
             roomList.innerHTML = "";
             rooms.forEach(room => {
                 const li = document.createElement('li');
                 li.dataset.roomName = room.name;
                 li.dataset.hasPassword = room.has_password;
-                
                 const roomInfo = document.createElement('div');
                 roomInfo.className = 'room-info';
-                roomInfo.innerHTML = `<span>${room.name}</span><span>(${room.user_count}명)</span>`;
+                roomInfo.innerHTML = `<span><span class="math-inline">\{room\.name\}</span\><span\>\(</span>{room.user_count}명)</span>`;
                 li.appendChild(roomInfo);
-
                 if (room.has_password) {
                     const lockIcon = document.createElement('span');
                     lockIcon.className = 'lock-icon';
                     lockIcon.textContent = '🔒';
                     li.appendChild(lockIcon);
                 }
-
                 li.addEventListener('click', () => {
                     const nickname = nicknameInput.value.trim();
                     if (!nickname) { alert("먼저 닉네임을 입력해주세요."); return; }
@@ -242,32 +198,43 @@
             });
         });
 
-        socket.on('join_failed', (data) => alert(data.message));
+        socket.on('join_failed', (data) => {
+            console.error("[Lobby] 방 입장 실패:", data.message);
+            alert(data.message);
+        });
 
         socket.on('join_success', async (data) => {
+            console.log("[Core] 방 입장 성공! 방:", data.room);
             currentRoomName = data.room;
             myNickname = data.nickname;
             lobby.style.display = 'none';
             meetingRoom.style.display = 'flex';
             roomNameDisplay.textContent = currentRoomName;
             myNicknameDisplay.textContent = `${myNickname} (나)`;
-            data.existing_users.forEach(user => { peerNicknames[user.sid] = user.nickname; });
-
+            data.existing_users.forEach(user => {
+                console.log(`[Core] 기존 유저 정보를 저장합니다: <span class="math-inline">\{user\.nickname\}\(</span>{user.sid})`);
+                peerNicknames[user.sid] = user.nickname;
+            });
             try {
+                console.log("[Media] 카메라/마이크 접근을 시작합니다...");
                 myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 myVideo.srcObject = myStream;
+                console.log("[Media] ✅ 카메라/마이크 준비 완료!");
                 isStreamReady = true;
-
+                console.log("[Queue] 대기 중인 작업들을 처리합니다...");
                 if (pendingPeers.length > 0) {
+                    console.log("[Queue] 대기 중인 유저들을 연결합니다:", pendingPeers);
                     pendingPeers.forEach(peerSid => handleUserJoined({ sid: peerSid }));
                     pendingPeers = [];
                 }
                 if (pendingOffers.length > 0) {
+                    console.log("[Queue] 대기 중인 Offer에 응답합니다:", pendingOffers.map(o => o.from_sid));
                     pendingOffers.forEach(offerData => handleOffer(offerData));
                     pendingOffers = [];
                 }
+                console.log("[Queue] 모든 대기 작업 처리 완료.");
             } catch (e) {
-                console.error("미디어 장치 접근 오류:", e);
+                console.error("[Media] ❌ 미디어 장치 접근 오류:", e);
                 alert("카메라/마이크 접근 권한을 허용해주세요.");
             }
         });
@@ -277,8 +244,10 @@
         // -----------------
 
         socket.on('user-joined', (data) => {
+            console.log(`[Signal] 새로운 유저 입장 신호 수신: <span class="math-inline">\{data\.nickname\}\(</span>{data.sid})`);
             peerNicknames[data.sid] = data.nickname;
             if (!isStreamReady) {
+                console.warn(`[Queue] 내 스트림이 아직 준비되지 않아, 유저(${data.sid})를 대기열에 추가합니다.`);
                 pendingPeers.push(data.sid);
                 return;
             }
@@ -286,15 +255,23 @@
         });
 
         async function handleUserJoined({ sid }) {
+            console.log(`[WebRTC] ➡️ Offer 생성을 시작합니다. 대상: <span class="math-inline">\{peerNicknames\[sid\]\}\(</span>{sid})`);
             const pc = createPeerConnection(sid);
-            if (!pc) return;
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit('offer', { target_sid: sid, from_sid: socket.id, offer });
+            if (!pc) { console.error("[WebRTC] ➡️ PeerConnection 생성 실패로 Offer 생성을 중단합니다."); return; }
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                console.log(`[WebRTC] ➡️ Offer 생성 및 LocalDescription 설정 완료. 서버로 전송합니다.`);
+                socket.emit('offer', { target_sid: sid, from_sid: socket.id, offer });
+            } catch (error) {
+                console.error(`[WebRTC] ➡️ Offer 생성 중 오류:`, error);
+            }
         }
 
         socket.on('offer', (data) => {
+            console.log(`[Signal] Offer 신호 수신. 보낸 사람: ${data.from_sid}`);
             if (!isStreamReady) {
+                console.warn(`[Queue] 내 스트림이 아직 준비되지 않아, Offer를 대기열에 추가합니다.`);
                 pendingOffers.push(data);
                 return;
             }
@@ -302,17 +279,31 @@
         });
 
         async function handleOffer(data) {
+            console.log(`[WebRTC] ⬅️ Answer 생성을 시작합니다. 보낸 사람: <span class="math-inline">\{peerNicknames\[data\.from\_sid\]\}\(</span>{data.from_sid})`);
             const pc = createPeerConnection(data.from_sid);
-            if (!pc) return;
-            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            socket.emit('answer', { target_sid: data.from_sid, from_sid: socket.id, answer });
+            if (!pc) { console.error("[WebRTC] ⬅️ PeerConnection 생성 실패로 Answer 생성을 중단합니다."); return; }
+            try {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                console.log(`[WebRTC] ⬅️ Answer 생성 및 LocalDescription 설정 완료. 서버로 전송합니다.`);
+                socket.emit('answer', { target_sid: data.from_sid, from_sid: socket.id, answer });
+            } catch (error) {
+                console.error(`[WebRTC] ⬅️ Answer 생성 중 오류:`, error);
+            }
         }
 
         socket.on('answer', async (data) => {
+            console.log(`[Signal] Answer 신호 수신. 보낸 사람: <span class="math-inline">\{peerNicknames\[data\.from\_sid\]\}\(</span>{data.from_sid})`);
             const pc = peerConnections[data.from_sid];
-            if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+            if (pc) {
+                try {
+                    await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    console.log(`[WebRTC] ✅ Answer 적용 완료: ${peerNicknames[data.from_sid]}`);
+                } catch (error) {
+                    console.error(`[WebRTC] ❌ Answer 적용 중 오류:`, error);
+                }
+            }
         });
 
         socket.on('ice-candidate', (data) => {
@@ -321,8 +312,8 @@
         });
 
         socket.on('user-left', (data) => {
-            const nickname = peerNicknames[data.sid] || '누군가';
-            console.log(`${nickname}님이 퇴장했습니다.`);
+            const nickname = peerNicknames[data.sid] || data.sid.substring(0, 5);
+            console.log(`[Signal] 유저 퇴장 신호 수신: <span class="math-inline">\{nickname\}\(</span>{data.sid})`);
             if (peerConnections[data.sid]) {
                 peerConnections[data.sid].close();
                 delete peerConnections[data.sid];
@@ -333,7 +324,11 @@
         });
 
         function createPeerConnection(sid) {
-            if (!myStream) return null;
+            if (!myStream) {
+                console.error("[WebRTC] createPeerConnection 호출 시 내 스트림이 없습니다.");
+                return null;
+            }
+            console.log(`[WebRTC] PeerConnection 객체를 생성합니다. 대상: ${sid}`);
             const pc = new RTCPeerConnection(configuration);
             peerConnections[sid] = pc;
             myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
@@ -341,6 +336,7 @@
                 if (event.candidate) socket.emit('ice-candidate', { target_sid: sid, from_sid: socket.id, candidate: event.candidate });
             };
             pc.ontrack = (event) => {
+                console.log(`[WebRTC] 원격 트랙을 받았습니다. 대상: ${sid}`);
                 let videoElement = document.getElementById(`video-${sid}`);
                 if (!videoElement) {
                     const videoWrapper = document.createElement('div');
@@ -386,52 +382,47 @@
             }
         });
 
-        muteBtn.addEventListener('click', () => {
-            if (!myStream) return;
-            isMuted = !isMuted;
-            myStream.getAudioTracks()[0].enabled = !isMuted;
-            muteBtn.textContent = isMuted ? '음소거 해제' : '음소거';
-            muteBtn.classList.toggle('off', isMuted);
-});
-
-        cameraBtn.addEventListener('click', () => {
-            if (!myStream) return;
-            isCameraOff = !isCameraOff;
-            myStream.getVideoTracks()[0].enabled = !isCameraOff;
-            cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기';
-            cameraBtn.classList.toggle('off', isCameraOff);
-        });
+        muteBtn.addEventListener('click', () => { if(myStream) { isMuted = !isMuted; myStream.getAudioTracks()[0].enabled = !isMuted; muteBtn.textContent = isMuted ? '음소거 해제' : '음소거'; muteBtn.classList.toggle('off', isMuted); }});
+        cameraBtn.addEventListener('click', () => { if(myStream) { isCameraOff = !isCameraOff; myStream.getVideoTracks()[0].enabled = !isCameraOff; cameraBtn.textContent = isCameraOff ? '카메라 켜기' : '카메라 끄기'; cameraBtn.classList.toggle('off', isCameraOff); }});
 
         shareScreenBtn.addEventListener('click', async () => {
             if (!myStream) return;
             if (isScreenSharing) {
-                const newWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                const newWebcamTrack = newWebcamStream.getVideoTracks()[0];
-                myVideo.srcObject = new MediaStream([newWebcamTrack, myStream.getAudioTracks()[0]]);
-                myStream.getVideoTracks()[0].stop();
-                myStream.removeTrack(myStream.getVideoTracks()[0]);
-                myStream.addTrack(newWebcamTrack);
-                for (const sid in peerConnections) {
-                    const sender = peerConnections[sid].getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (sender) await sender.replaceTrack(newWebcamTrack);
-                }
-                shareScreenBtn.textContent = '화면 공유';
-                isScreenSharing = false;
+                try {
+                    const newWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    const newWebcamTrack = newWebcamStream.getVideoTracks()[0];
+                    const currentAudioTrack = myStream.getAudioTracks()[0];
+                    
+                    const newStream = new MediaStream([newWebcamTrack, currentAudioTrack]);
+                    myVideo.srcObject = newStream;
+                    myStream.getVideoTracks()[0].stop();
+                    myStream.removeTrack(myStream.getVideoTracks()[0]);
+                    myStream.addTrack(newWebcamTrack);
+
+                    for (const sid in peerConnections) {
+                        const sender = peerConnections[sid].getSenders().find(s => s.track && s.track.kind === 'video');
+                        if (sender) await sender.replaceTrack(newWebcamTrack);
+                    }
+                    shareScreenBtn.textContent = '화면 공유';
+                    isScreenSharing = false;
+                } catch (e) { console.error("웹캠으로 돌아오는 중 오류:", e); }
             } else {
                 try {
                     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                     const screenTrack = screenStream.getVideoTracks()[0];
-                    myVideo.srcObject = new MediaStream([screenTrack, myStream.getAudioTracks()[0]]);
+                    const currentAudioTrack = myStream.getAudioTracks()[0];
+
+                    myVideo.srcObject = new MediaStream([screenTrack, currentAudioTrack]);
+                    
                     const currentVideoTrack = myStream.getVideoTracks()[0];
                     myStream.removeTrack(currentVideoTrack);
                     myStream.addTrack(screenTrack);
+                    
                     for (const sid in peerConnections) {
                         const sender = peerConnections[sid].getSenders().find(s => s.track && s.track.kind === 'video');
                         if (sender) await sender.replaceTrack(screenTrack);
                     }
-                    screenTrack.onended = () => {
-                        if (isScreenSharing) shareScreenBtn.click();
-                    };
+                    screenTrack.onended = () => { if (isScreenSharing) shareScreenBtn.click(); };
                     shareScreenBtn.textContent = '공유 중지';
                     isScreenSharing = true;
                 } catch (e) { console.error("화면 공유 실패:", e); }

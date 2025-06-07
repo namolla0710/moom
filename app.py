@@ -3,7 +3,7 @@ from flask_socketio import SocketIO, emit, join_room, rooms
 
 app = Flask(__name__)
 # 실제 운영 시에는 외부 설정 파일이나 환경 변수를 사용하는 것이 안전합니다.
-app.config['SECRET_KEY'] = 'a-very-secret-key-for-this-webrtc-project'
+app.config['SECRET_KEY'] = 'sexy-moon-130710-kmc'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # 활성화된 방의 정보를 저장할 딕셔너리
@@ -121,17 +121,17 @@ def handle_chat(data):
 # 이들은 특정 두 사용자 간에 직접 전달되므로, SID 기반으로 정확히 중계합니다.
 @socketio.on('offer')
 def handle_offer(data):
-    # print(f"➡️ Offer: {request.sid} -> {data.get('target_sid')}")
+    print(f"➡️ Offer: {request.sid} -> {data.get('target_sid')}")
     emit('offer', data, to=data.get('target_sid'))
 
 @socketio.on('answer')
 def handle_answer(data):
-    # print(f"⬅️ Answer: {request.sid} -> {data.get('target_sid')}")
+    print(f"⬅️ Answer: {request.sid} -> {data.get('target_sid')}")
     emit('answer', data, to=data.get('target_sid'))
 
 @socketio.on('ice-candidate')
 def handle_ice_candidate(data):
-    # print(f"🧊 ICE: {request.sid} -> {data.get('target_sid')}")
+    print(f"🧊 ICE: {request.sid} -> {data.get('target_sid')}")
     emit('ice-candidate', data, to=data.get('target_sid'))
 
 if __name__ == '__main__':
