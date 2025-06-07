@@ -2,7 +2,7 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit, join_room, rooms
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'a-super-secret-key-for-this-webrtc-project-final'
+app.config['SECRET_KEY'] = 'this-is-the-final-super-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # 구조: {'room_name': {'password': '123', 'users': {'sid1': 'Alice', 'sid2': 'Bob'}}}
@@ -51,7 +51,7 @@ def handle_disconnect():
             print(f"🚪 {nickname}({user_sid})님이 '{room_name}' 방에서 나갔습니다.")
             
             emit('user-left', {'sid': user_sid}, to=room_name)
-            emit('system_message', {'message': f"'{nickname}'님이 퇴장하셨습니다."}, to=room_name) # 오타 수정
+            emit('system_message', {'message': f"'{nickname}'님이 퇴장하셨습니다."}, to=room_name)
             emit('room_status_update', {'user_count': len(data['users'])}, to=room_name)
 
             if not data['users']:
@@ -120,11 +120,7 @@ def handle_chat(data):
     room = data.get('room')
     if room in active_rooms and request.sid in active_rooms[room]['users']:
         sender_nickname = active_rooms[room]['users'][request.sid]
-        emit('chat', {
-            'from_sid': request.sid,
-            'nickname': sender_nickname,
-            'message': data.get('message')
-        }, to=room)
+        emit('chat', { 'from_sid': request.sid, 'nickname': sender_nickname, 'message': data.get('message') }, to=room)
 
 # WebRTC 시그널링 핸들러
 @socketio.on('offer')
