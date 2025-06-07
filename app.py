@@ -123,11 +123,22 @@ def handle_chat(data):
         emit('chat', { 'from_sid': request.sid, 'nickname': sender_nickname, 'message': data.get('message') }, to=room)
 
 @socketio.on('offer')
-def handle_offer(data): emit('offer', data, to=data.get('target_sid'))
+def handle_offer(data):
+    # ✨ 디버깅을 위해 print문 추가
+    print(f"➡️ Offer 신호 수신 및 전달: {request.sid} -> {data.get('target_sid')}")
+    emit('offer', data, to=data.get('target_sid'))
+
 @socketio.on('answer')
-def handle_answer(data): emit('answer', data, to=data.get('target_sid'))
+def handle_answer(data):
+    # ✨ 디버깅을 위해 print문 추가
+    print(f"⬅️ Answer 신호 수신 및 전달: {request.sid} -> {data.get('target_sid')}")
+    emit('answer', data, to=data.get('target_sid'))
+
 @socketio.on('ice-candidate')
-def handle_ice_candidate(data): emit('ice-candidate', data, to=data.get('target_sid'))
+def handle_ice_candidate(data):
+    # ✨ 디버깅을 위해 print문 추가 (주석 해제)
+    # print(f"🧊 ICE 신호 전달: {request.sid} -> {data.get('target_sid')}")
+    emit('ice-candidate', data, to=data.get('target_sid'))
 
 if __name__ == '__main__':
     print("🚀 Flask-SocketIO 서버가 http://localhost:8080 에서 실행됩니다.")
