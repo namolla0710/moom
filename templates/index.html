@@ -176,7 +176,7 @@
                 li.dataset.hasPassword = room.has_password;
                 const roomInfo = document.createElement('div');
                 roomInfo.className = 'room-info';
-                roomInfo.innerHTML = `<span><span class="math-inline">\{room\.name\}</span\><span\>\(</span>{room.user_count}명)</span>`;
+                roomInfo.innerHTML = `<span><span class="math-inline">${room.name}</span><span>(</span>${room.user_count}명)</span>`;
                 li.appendChild(roomInfo);
                 if (room.has_password) {
                     const lockIcon = document.createElement('span');
