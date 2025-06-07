@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>Moom (Full-featured)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moom (Upgraded)</title>
     <style>
         :root {
             --primary-bg: #2c2f33;
@@ -13,6 +14,7 @@
             --danger-accent: #f04747;
             --text-light: #ffffff;
             --text-muted: #99aab5;
+            --system-message: #f1c40f;
         }
         body { 
             font-family: 'Malgun Gothic', sans-serif; 
@@ -26,57 +28,53 @@
             align-items: center; 
         }
         
+        /* --- 로비 스타일 --- */
         #lobby { text-align: center; width: 90%; max-width: 900px; }
-        .lobby-container { display: flex; flex-direction: column; md:flex-row; justify-content: space-around; margin-top: 20px; gap: 40px; }
+        #server-stats { margin-bottom: 20px; color: var(--text-muted); }
+        .lobby-container { display: flex; justify-content: space-around; margin-top: 20px; gap: 40px; }
         #room-list-container, #create-room-form { background-color: var(--secondary-bg); padding: 25px; border-radius: 8px; flex: 1; }
         h1 { font-size: 2.5em; color: var(--primary-accent); }
         h2 { margin-top: 0; border-bottom: 1px solid var(--tertiary-bg); padding-bottom: 15px; }
         #room-list { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; text-align: left; }
         #room-list li { background-color: var(--tertiary-bg); margin-bottom: 10px; padding: 15px; border-radius: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; }
         #room-list li:hover { background-color: #555b62; }
-        #room-list .room-info span { margin-right: 15px; }
-        #room-list .lock-icon { color: var(--text-muted); font-size: 1.2em; }
         #create-room-form input { display: block; width: calc(100% - 22px); font-size: 1.1em; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #555; background-color: var(--primary-bg); color: var(--text-light); }
-        #create-join-btn { width: 100%; font-size: 1.2em; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; background-color: var(--primary-accent); color: var(--text-light); transition: background-color 0.2s; }
-        #create-join-btn:hover { background-color: var(--primary-accent-hover); }
+        #create-join-btn { width: 100%; font-size: 1.2em; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; background-color: var(--primary-accent); color: var(--text-light); }
 
+        /* --- 회의실 스타일 --- */
         #meeting-room { display: none; width: 100%; height: 100%; flex-direction: column; }
         #header { padding: 10px; background-color: var(--secondary-bg); text-align: center; font-size: 1.2em; }
         #header span { font-weight: bold; color: var(--primary-accent); }
         .main-container { display: flex; flex: 1; overflow: hidden; }
         #video-container { flex: 3; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; padding: 10px; background-color: var(--primary-bg); overflow-y: auto; }
-        video { width: 100%; border-radius: 8px; background-color: #000; transform: scaleX(-1); }
-        .video-wrapper { position: relative; }
+        video { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; background-color: #000; transform: scaleX(-1); }
+        .video-wrapper { position: relative; border-radius: 8px; overflow: hidden;}
         .video-wrapper p { position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.6); color: white; padding: 4px 8px; border-radius: 5px; font-size: 0.9em; }
-        #my-video-wrapper { border: 2px solid var(--primary-accent); border-radius: 10px; }
-        #my-video-wrapper p { font-weight: bold; }
-        .video-wrapper .status-icon {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-size: 1.5em;
-            color: white;
-            background-color: rgba(0,0,0,0.5);
-            padding: 5px;
-            border-radius: 50%;
-            display: none;
-        }
+        .video-wrapper .status-icon { position: absolute; top: 10px; right: 10px; font-size: 1.5em; color: white; background-color: rgba(255, 82, 82, 0.7); padding: 5px; border-radius: 50%; display: none; }
+        #my-video-wrapper { border: 2px solid var(--primary-accent); }
         #chat-container { flex: 1; display: flex; flex-direction: column; background-color: var(--secondary-bg); padding: 10px; min-width: 300px; }
-        #chat-messages { flex-grow: 1; overflow-y: auto; border: 1px solid var(--tertiary-bg); padding: 10px; margin-bottom: 10px; list-style-type: none; }
-        #chat-messages li:not(.other-chat-pn) { margin-bottom: 8px; word-break: break-all; }
-        .my-chat { text-align: right; }
+        #chat-messages { flex-grow: 1; overflow-y: auto; list-style-type: none; padding: 10px; border: 1px solid var(--tertiary-bg); margin-bottom: 10px; }
+        #chat-messages li { word-break: break-all; margin-bottom: 8px; }
         .other-chat-pn { text-align: left; padding-left: 0.5em; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted); }
-        #chat-form { display: flex; }
-        #chat-input { flex-grow: 1; border: none; padding: 8px; background-color: var(--tertiary-bg); color: var(--text-light); }
+        .system-message { text-align: center; color: var(--system-message); font-style: italic; font-size: 0.9em; }
         #controls { text-align: center; padding: 15px; background-color: var(--secondary-bg); }
-        #controls button { background-color: var(--primary-accent); color: white; border: none; padding: 10px 15px; margin: 0 5px; border-radius: 5px; cursor: pointer; font-size: 1em; transition: background-color 0.2s; }
-        #controls button:hover { background-color: var(--primary-accent-hover); }
+        #controls button { background-color: var(--primary-accent); color: white; border: none; padding: 10px 15px; margin: 0 5px; border-radius: 5px; cursor: pointer; font-size: 1em; }
         #controls button.off { background-color: var(--danger-accent); }
+
+        /* --- 모바일 반응형 디자인 --- */
+        @media (max-width: 768px) {
+            .lobby-container { flex-direction: column; }
+            .main-container { flex-direction: column; }
+            #video-container { min-height: 50vh; }
+            #chat-container { min-width: unset; width: 100%; flex: 1; }
+            h1 { font-size: 2em; }
+        }
     </style>
 </head>
 <body>
     <div id="lobby">
         <h1>Moom</h1>
+        <div id="server-stats">현재 접속자: <span id="total-users-count">0</span>명</div>
         <div class="lobby-container">
             <div id="room-list-container">
                 <h2>활성화된 방 목록</h2>
@@ -93,7 +91,10 @@
     </div>
 
     <div id="meeting-room">
-        <div id="header">현재 방: <span id="room-name-display"></span></div>
+        <div id="header">
+            현재 방: <span id="room-name-display"></span>
+            (<span id="room-user-count">0</span>명) | PW: <span id="room-pw-display">없음</span>
+        </div>
         <div class="main-container">
             <div id="video-container">
                 <div id="my-video-wrapper" class="video-wrapper">
@@ -105,9 +106,7 @@
             </div>
             <div id="chat-container">
                 <ul id="chat-messages"></ul>
-                <form id="chat-form">
-                    <input id="chat-input" type="text" placeholder="메시지를 입력하세요..." autocomplete="off">
-                </form>
+                <form id="chat-form"> <input id="chat-input" type="text" placeholder="메시지를 입력하세요..." autocomplete="off"> </form>
             </div>
         </div>
         <div id="controls">
@@ -120,77 +119,41 @@
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
-        // -----------------
-        // 1. 초기 설정 및 변수 선언
-        // -----------------
         const socket = io({ transports: ['websocket'] });
 
         // DOM 요소
-        const lobby = document.getElementById('lobby');
-        const nicknameInput = document.getElementById('nickname-input');
-        const roomNameInput = document.getElementById('room-name-input');
-        const passwordInput = document.getElementById('password-input'); // ✨ 이 줄이 누락되어 있었습니다. 다시 추가했습니다.
-        const createJoinBtn = document.getElementById('create-join-btn');
-        const roomList = document.getElementById('room-list');
-        const meetingRoom = document.getElementById('meeting-room');
-        const roomNameDisplay = document.getElementById('room-name-display');
-        const myNicknameDisplay = document.getElementById('my-nickname-display');
-        const videoContainer = document.getElementById('video-container');
-        const myVideo = document.getElementById('my-video');
-        const muteBtn = document.getElementById('mute-btn');
-        const cameraBtn = document.getElementById('camera-btn');
-        const shareScreenBtn = document.getElementById('share-screen-btn');
-        const changeNicknameBtn = document.getElementById('change-nickname-btn');
-        const chatForm = document.getElementById('chat-form');
-        const chatInput = document.getElementById('chat-input');
-        const chatMessages = document.getElementById('chat-messages');
-        const myMuteIcon = document.getElementById('my-mute-icon');
-        const myCameraOffIcon = document.getElementById('my-camera-off-icon');
+        const lobby = document.getElementById('lobby'), meetingRoom = document.getElementById('meeting-room');
+        const nicknameInput = document.getElementById('nickname-input'), roomNameInput = document.getElementById('room-name-input'), passwordInput = document.getElementById('password-input');
+        const createJoinBtn = document.getElementById('create-join-btn'), roomList = document.getElementById('room-list');
+        const totalUsersCount = document.getElementById('total-users-count');
+        const roomNameDisplay = document.getElementById('room-name-display'), myNicknameDisplay = document.getElementById('my-nickname-display');
+        const roomUserCount = document.getElementById('room-user-count'), roomPwDisplay = document.getElementById('room-pw-display');
+        const videoContainer = document.getElementById('video-container'), myVideo = document.getElementById('my-video');
+        const muteBtn = document.getElementById('mute-btn'), cameraBtn = document.getElementById('camera-btn');
+        const shareScreenBtn = document.getElementById('share-screen-btn'), changeNicknameBtn = document.getElementById('change-nickname-btn');
+        const chatForm = document.getElementById('chat-form'), chatInput = document.getElementById('chat-input'), chatMessages = document.getElementById('chat-messages');
+        const myMuteIcon = document.getElementById('my-mute-icon'), myCameraOffIcon = document.getElementById('my-camera-off-icon');
 
         // 상태 변수
         let myStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
         let isMuted = false, isCameraOff = false, isScreenSharing = false;
 
-        // WebRTC STUN 및 TURN 서버 설정
-        const configuration = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
-            ]
-        };
+        const configuration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' } ] };
 
-        // -----------------
-        // 2. 로비 기능 관련 로직
-        // -----------------
-
+        // --- 로비 로직 ---
         function attemptToJoinRoom(nickname, roomName, password = "") {
             if (!nickname) { alert("닉네임을 입력해주세요."); return; }
             if (!roomName) { alert("방 이름을 입력해주세요."); return; }
             socket.emit('join', { nickname, room_name: roomName, password });
         }
-
-        createJoinBtn.addEventListener('click', () => {
-            attemptToJoinRoom(nicknameInput.value.trim(), roomNameInput.value.trim(), passwordInput.value);
-        });
+        createJoinBtn.addEventListener('click', () => { attemptToJoinRoom(nicknameInput.value.trim(), roomNameInput.value.trim(), passwordInput.value); });
         
-        socket.on('update_room_list', (rooms) => {
+        socket.on('update_stats', (data) => {
+            totalUsersCount.textContent = data.total_users;
             roomList.innerHTML = "";
-            rooms.forEach(room => {
+            data.rooms.forEach(room => {
                 const li = document.createElement('li');
-                li.dataset.roomName = room.name;
-                li.dataset.hasPassword = room.has_password;
-                const roomInfo = document.createElement('div');
-                roomInfo.className = 'room-info';
-                roomInfo.innerHTML = `<span>${room.name}</span><span>(${room.user_count}명)</span>`;
-                li.appendChild(roomInfo);
-                if (room.has_password) {
-                    const lockIcon = document.createElement('span');
-                    lockIcon.className = 'lock-icon';
-                    lockIcon.textContent = '🔒';
-                    li.appendChild(lockIcon);
-                }
+                li.innerHTML = `<div class="room-info"><span>${room.name}</span><span>(${room.user_count}명)</span></div>` + (room.has_password ? `<span class="lock-icon">🔒</span>` : '');
                 li.addEventListener('click', () => {
                     const nickname = nicknameInput.value.trim();
                     if (!nickname) { alert("먼저 닉네임을 입력해주세요."); return; }
@@ -204,21 +167,19 @@
                 roomList.appendChild(li);
             });
         });
-        
+
         socket.on('join_failed', (data) => alert(data.message));
         
         socket.on('join_success', async (data) => {
-            currentRoomName = data.room;
-            myNickname = data.nickname;
-            lobby.style.display = 'none';
-            meetingRoom.style.display = 'flex';
+            currentRoomName = data.room; myNickname = data.nickname;
+            lobby.style.display = 'none'; meetingRoom.style.display = 'flex';
             roomNameDisplay.textContent = currentRoomName;
             myNicknameDisplay.textContent = `${myNickname} (나)`;
+            roomPwDisplay.textContent = data.room_password || '없음';
 
             try {
                 myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 myVideo.srcObject = myStream;
-
                 data.existing_users.forEach(user => {
                     peerNicknames[user.sid] = user.nickname;
                     handleUserJoined(user);
@@ -229,13 +190,8 @@
             }
         });
 
-        // -----------------
-        // 3. WebRTC 및 시그널링 로직
-        // -----------------
-
-        socket.on('user-joined-info', (data) => {
-            peerNicknames[data.sid] = data.nickname;
-        });
+        // --- WebRTC 및 시그널링 로직 ---
+        socket.on('user-joined-info', (data) => { peerNicknames[data.sid] = data.nickname; });
 
         async function handleUserJoined({ sid }) {
             const pc = createPeerConnection(sid);
@@ -244,9 +200,7 @@
                 const offer = await pc.createOffer();
                 await pc.setLocalDescription(offer);
                 socket.emit('offer', { target_sid: sid, from_sid: socket.id, offer });
-            } catch (error) {
-                console.error("Offer 생성 오류:", error);
-            }
+            } catch (error) { console.error("Offer 생성 오류:", error); }
         }
 
         socket.on('offer', async (data) => {
@@ -257,9 +211,7 @@
                 const answer = await pc.createAnswer();
                 await pc.setLocalDescription(answer);
                 socket.emit('answer', { target_sid: data.from_sid, from_sid: socket.id, answer });
-            } catch (error) {
-                console.error("Answer 생성 오류:", error);
-            }
+            } catch (error) { console.error("Answer 생성 오류:", error); }
         });
 
         socket.on('answer', async (data) => {
@@ -274,7 +226,6 @@
 
         socket.on('user-left', (data) => {
             const nickname = peerNicknames[data.sid] || '누군가';
-            console.log(`${nickname}님이 퇴장했습니다.`);
             if (peerConnections[data.sid]) {
                 peerConnections[data.sid].close();
                 delete peerConnections[data.sid];
@@ -298,8 +249,8 @@
                     videoWrapper.className = 'video-wrapper';
                     videoWrapper.innerHTML = `
                         <video id="video-${sid}" autoplay playsinline></video>
-                        <div id="mute-icon-${sid}" class="status-icon" style="display: none;">🔇</div>
-                        <div id="camera-off-icon-${sid}" class="status-icon" style="display: none;">❌</div>
+                        <div id="mute-icon-${sid}" class="status-icon">🔇</div>
+                        <div id="camera-off-icon-${sid}" class="status-icon">❌</div>
                         <p>${peerNicknames[sid] || sid.substring(0, 5)}</p>
                     `;
                     videoContainer.appendChild(videoWrapper);
@@ -309,36 +260,43 @@
             return pc;
         }
 
-        // -----------------
-        // 4. 새로운 기능 (닉네임 변경, 상태 표시)
-        // -----------------
-
+        // --- 새로운 기능 로직 ---
         changeNicknameBtn.addEventListener('click', () => {
             const newNickname = prompt("새로운 닉네임을 입력하세요:", myNickname);
             if (newNickname && newNickname.trim() !== "") {
-                myNickname = newNickname.trim();
-                myNicknameDisplay.textContent = `${myNickname} (나)`;
-                socket.emit('change_nickname', { room: currentRoomName, new_nickname: myNickname });
+                socket.emit('change_nickname', { room: currentRoomName, new_nickname: newNickname.trim() });
             }
         });
 
         socket.on('nickname_changed', (data) => {
-            peerNicknames[data.sid] = data.new_nickname;
-            const nameTag = document.querySelector(`#video-wrapper-${data.sid} p`);
-            if (nameTag) nameTag.textContent = data.new_nickname;
+            const oldNickname = (data.sid === socket.id) ? myNickname : peerNicknames[data.sid];
+            if (data.sid === socket.id) {
+                myNickname = data.new_nickname;
+                myNicknameDisplay.textContent = `${myNickname} (나)`;
+            } else {
+                peerNicknames[data.sid] = data.new_nickname;
+                const nameTag = document.querySelector(`#video-wrapper-${data.sid} p`);
+                if (nameTag) nameTag.textContent = data.new_nickname;
+            }
         });
-
+        
         socket.on('user_media_status_changed', (data) => {
             const { sid, mediaType, status } = data;
             const iconId = `${mediaType === 'audio' ? 'mute' : 'camera-off'}-icon-${sid}`;
             const icon = document.getElementById(iconId);
             if (icon) icon.style.display = status ? 'block' : 'none';
         });
-        
-        // -----------------
-        // 5. 부가 기능 (채팅, 미디어 제어)
-        // -----------------
 
+        socket.on('room_status_update', (data) => { roomUserCount.textContent = data.user_count; });
+        socket.on('system_message', (data) => {
+            const item = document.createElement('li');
+            item.className = 'system-message';
+            item.textContent = data.message;
+            chatMessages.appendChild(item);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+
+        // --- 부가 기능 ---
         muteBtn.addEventListener('click', () => {
             if (!myStream) return;
             isMuted = !isMuted;
@@ -360,17 +318,14 @@
         });
         
         shareScreenBtn.addEventListener('click', async () => {
-            if (!myStream) return;
             if (isScreenSharing) {
                 try {
                     const newWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                     const newVideoTrack = newWebcamStream.getVideoTracks()[0];
                     const newAudioTrack = newWebcamStream.getAudioTracks()[0];
-                    
                     myVideo.srcObject = newWebcamStream;
                     myStream.getTracks().forEach(track => track.stop());
                     myStream = newWebcamStream;
-
                     for (const sid in peerConnections) {
                         const pc = peerConnections[sid];
                         const videoSender = pc.getSenders().find(s => s.track?.kind === 'video');
@@ -385,27 +340,29 @@
                 try {
                     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                     const screenVideoTrack = screenStream.getVideoTracks()[0];
-                    const screenAudioTrack = screenStream.getAudioTracks().length > 0 ? screenStream.getAudioTracks()[0] : null;
-                    
+                    const screenAudioTrack = screenStream.getAudioTracks()[0];
                     const originalAudioTrack = myStream.getAudioTracks()[0];
-                    const newStreamForLocal = new MediaStream([screenVideoTrack, originalAudioTrack]);
-                    myVideo.srcObject = newStreamForLocal;
-
+                    myVideo.srcObject = new MediaStream([screenVideoTrack, originalAudioTrack]);
                     for (const sid in peerConnections) {
                         const pc = peerConnections[sid];
                         const videoSender = pc.getSenders().find(s => s.track?.kind === 'video');
                         if (videoSender) await videoSender.replaceTrack(screenVideoTrack);
-                        
-                        if (screenAudioTrack) {
-                            const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
-                            if (audioSender) await audioSender.replaceTrack(screenAudioTrack);
-                        }
+                        const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                        if (audioSender) await audioSender.replaceTrack(screenAudioTrack || originalAudioTrack);
                     }
-                    
-                    screenTrack.onended = () => { if (isScreenSharing) shareScreenBtn.click(); };
+                    screenVideoTrack.onended = () => { if (isScreenSharing) shareScreenBtn.click(); };
                     shareScreenBtn.textContent = '공유 중지';
                     isScreenSharing = true;
                 } catch (e) { console.error("화면 공유 실패:", e); }
+            }
+        });
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = chatInput.value;
+            if (message && currentRoomName) {
+                socket.emit('chat', { room: currentRoomName, message: message });
+                chatInput.value = '';
             }
         });
 
@@ -421,15 +378,6 @@
             item.className = data.from_sid === socket.id ? 'my-chat' : 'other-chat';
             chatMessages.appendChild(item);
             chatMessages.scrollTop = chatMessages.scrollHeight;
-        });
-
-        chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const message = chatInput.value;
-            if (message && currentRoomName) {
-                socket.emit('chat', { room: currentRoomName, message: message });
-                chatInput.value = '';
-            }
         });
     </script>
 </body>
