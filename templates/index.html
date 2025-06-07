@@ -120,24 +120,50 @@
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script>
+        // -----------------
+        // 1. 초기 설정 및 변수 선언
+        // -----------------
         const socket = io({ transports: ['websocket'] });
 
         // DOM 요소
-        const lobby = document.getElementById('lobby'), meetingRoom = document.getElementById('meeting-room');
-        const nicknameInput = document.getElementById('nickname-input'), roomNameInput = document.getElementById('room-name-input');
-        const createJoinBtn = document.getElementById('create-join-btn'), roomList = document.getElementById('room-list');
-        const roomNameDisplay = document.getElementById('room-name-display'), myNicknameDisplay = document.getElementById('my-nickname-display');
-        const videoContainer = document.getElementById('video-container'), myVideo = document.getElementById('my-video');
-        const muteBtn = document.getElementById('mute-btn'), cameraBtn = document.getElementById('camera-btn');
-        const shareScreenBtn = document.getElementById('share-screen-btn'), changeNicknameBtn = document.getElementById('change-nickname-btn');
-        const chatForm = document.getElementById('chat-form'), chatInput = document.getElementById('chat-input'), chatMessages = document.getElementById('chat-messages');
-        const myMuteIcon = document.getElementById('my-mute-icon'), myCameraOffIcon = document.getElementById('my-camera-off-icon');
+        const lobby = document.getElementById('lobby');
+        const nicknameInput = document.getElementById('nickname-input');
+        const roomNameInput = document.getElementById('room-name-input');
+        const passwordInput = document.getElementById('password-input'); // ✨ 이 줄이 누락되어 있었습니다. 다시 추가했습니다.
+        const createJoinBtn = document.getElementById('create-join-btn');
+        const roomList = document.getElementById('room-list');
+        const meetingRoom = document.getElementById('meeting-room');
+        const roomNameDisplay = document.getElementById('room-name-display');
+        const myNicknameDisplay = document.getElementById('my-nickname-display');
+        const videoContainer = document.getElementById('video-container');
+        const myVideo = document.getElementById('my-video');
+        const muteBtn = document.getElementById('mute-btn');
+        const cameraBtn = document.getElementById('camera-btn');
+        const shareScreenBtn = document.getElementById('share-screen-btn');
+        const changeNicknameBtn = document.getElementById('change-nickname-btn');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatMessages = document.getElementById('chat-messages');
+        const myMuteIcon = document.getElementById('my-mute-icon');
+        const myCameraOffIcon = document.getElementById('my-camera-off-icon');
 
         // 상태 변수
         let myStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
         let isMuted = false, isCameraOff = false, isScreenSharing = false;
 
-        const configuration = { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' }, { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' } ] };
+        // WebRTC STUN 및 TURN 서버 설정
+        const configuration = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+                { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
+            ]
+        };
+
+        // -----------------
+        // 2. 로비 기능 관련 로직
+        // -----------------
 
         function attemptToJoinRoom(nickname, roomName, password = "") {
             if (!nickname) { alert("닉네임을 입력해주세요."); return; }
@@ -145,7 +171,9 @@
             socket.emit('join', { nickname, room_name: roomName, password });
         }
 
-        createJoinBtn.addEventListener('click', () => { attemptToJoinRoom(nicknameInput.value.trim(), roomNameInput.value.trim(), passwordInput.value); });
+        createJoinBtn.addEventListener('click', () => {
+            attemptToJoinRoom(nicknameInput.value.trim(), roomNameInput.value.trim(), passwordInput.value);
+        });
         
         socket.on('update_room_list', (rooms) => {
             roomList.innerHTML = "";
@@ -193,13 +221,17 @@
 
                 data.existing_users.forEach(user => {
                     peerNicknames[user.sid] = user.nickname;
-                    handleUserJoined(user); // `data` 객체를 통째로 전달
+                    handleUserJoined(user);
                 });
             } catch (e) {
                 console.error("미디어 장치 접근 오류:", e);
                 alert("카메라/마이크 접근 권한을 허용해주세요.");
             }
         });
+
+        // -----------------
+        // 3. WebRTC 및 시그널링 로직
+        // -----------------
 
         socket.on('user-joined-info', (data) => {
             peerNicknames[data.sid] = data.nickname;
@@ -248,8 +280,8 @@
                 delete peerConnections[data.sid];
             }
             delete peerNicknames[data.sid];
-            const videoElement = document.getElementById(`video-wrapper-${data.sid}`);
-            if (videoElement) videoElement.remove();
+            const videoWrapper = document.getElementById(`video-wrapper-${data.sid}`);
+            if (videoWrapper) videoWrapper.remove();
         });
 
         function createPeerConnection(sid) {
@@ -277,6 +309,10 @@
             return pc;
         }
 
+        // -----------------
+        // 4. 새로운 기능 (닉네임 변경, 상태 표시)
+        // -----------------
+
         changeNicknameBtn.addEventListener('click', () => {
             const newNickname = prompt("새로운 닉네임을 입력하세요:", myNickname);
             if (newNickname && newNickname.trim() !== "") {
@@ -299,6 +335,10 @@
             if (icon) icon.style.display = status ? 'block' : 'none';
         });
         
+        // -----------------
+        // 5. 부가 기능 (채팅, 미디어 제어)
+        // -----------------
+
         muteBtn.addEventListener('click', () => {
             if (!myStream) return;
             isMuted = !isMuted;
@@ -348,20 +388,17 @@
                     const screenAudioTrack = screenStream.getAudioTracks().length > 0 ? screenStream.getAudioTracks()[0] : null;
                     
                     const originalAudioTrack = myStream.getAudioTracks()[0];
-
-                    myVideo.srcObject = screenStream;
-                    myStream.getTracks().forEach(track => track.stop());
-                    myStream = new MediaStream([screenVideoTrack, originalAudioTrack]);
+                    const newStreamForLocal = new MediaStream([screenVideoTrack, originalAudioTrack]);
+                    myVideo.srcObject = newStreamForLocal;
 
                     for (const sid in peerConnections) {
                         const pc = peerConnections[sid];
                         const videoSender = pc.getSenders().find(s => s.track?.kind === 'video');
                         if (videoSender) await videoSender.replaceTrack(screenVideoTrack);
                         
-                        // 화면 공유 오디오가 있으면 교체, 없으면 내 마이크 유지
-                        const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
-                        if (audioSender) {
-                            await audioSender.replaceTrack(screenAudioTrack || originalAudioTrack);
+                        if (screenAudioTrack) {
+                            const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                            if (audioSender) await audioSender.replaceTrack(screenAudioTrack);
                         }
                     }
                     
@@ -372,7 +409,6 @@
             }
         });
 
-        // 채팅 기능
         socket.on('chat', (data) => {
             if (data.from_sid !== socket.id) {
                 const nameItem = document.createElement('li');
