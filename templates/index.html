@@ -3,32 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Moom (Upgraded)</title>
+    <title>Moom (Fixed)</title>
     <style>
         :root {
-            --primary-bg: #2c2f33;
-            --secondary-bg: #23272a;
-            --tertiary-bg: #40444b;
-            --primary-accent: #7289da;
-            --primary-accent-hover: #677bc4;
-            --danger-accent: #f04747;
-            --text-light: #ffffff;
-            --text-muted: #99aab5;
-            --system-message: #f1c40f;
+            --primary-bg: #2c2f33; --secondary-bg: #23272a; --tertiary-bg: #40444b;
+            --primary-accent: #7289da; --primary-accent-hover: #677bc4; --danger-accent: #f04747;
+            --text-light: #ffffff; --text-muted: #99aab5; --system-message: #f1c40f;
         }
-        body { 
-            font-family: 'Malgun Gothic', sans-serif; 
-            background-color: var(--primary-bg); 
-            color: var(--text-light); 
-            margin: 0; 
-            display: flex; 
-            flex-direction: column; 
-            height: 100vh; 
-            justify-content: center; 
-            align-items: center; 
-        }
+        body { font-family: 'Malgun Gothic', sans-serif; background-color: var(--primary-bg); color: var(--text-light); margin: 0; display: flex; flex-direction: column; height: 100vh; justify-content: center; align-items: center; }
         
-        /* --- 로비 스타일 --- */
         #lobby { text-align: center; width: 90%; max-width: 900px; }
         #server-stats { margin-bottom: 20px; color: var(--text-muted); }
         .lobby-container { display: flex; justify-content: space-around; margin-top: 20px; gap: 40px; }
@@ -41,7 +24,6 @@
         #create-room-form input { display: block; width: calc(100% - 22px); font-size: 1.1em; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #555; background-color: var(--primary-bg); color: var(--text-light); }
         #create-join-btn { width: 100%; font-size: 1.2em; padding: 12px 20px; cursor: pointer; border-radius: 5px; border: none; background-color: var(--primary-accent); color: var(--text-light); }
 
-        /* --- 회의실 스타일 --- */
         #meeting-room { display: none; width: 100%; height: 100%; flex-direction: column; }
         #header { padding: 10px; background-color: var(--secondary-bg); text-align: center; font-size: 1.2em; }
         #header span { font-weight: bold; color: var(--primary-accent); }
@@ -57,14 +39,15 @@
         #chat-messages li { word-break: break-all; margin-bottom: 8px; }
         .other-chat-pn { text-align: left; padding-left: 0.5em; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted); }
         .system-message { text-align: center; color: var(--system-message); font-style: italic; font-size: 0.9em; }
+        #chat-form { display: flex; } /* ✨ 버튼과 입력창을 나란히 놓기 위한 flex */
+        #chat-input { flex-grow: 1; border: none; padding: 10px; background-color: var(--tertiary-bg); color: var(--text-light); border-radius: 5px 0 0 5px; }
+        #chat-form button { border: none; background-color: var(--primary-accent); color: white; padding: 0 15px; border-radius: 0 5px 5px 0; cursor: pointer; }
         #controls { text-align: center; padding: 15px; background-color: var(--secondary-bg); }
         #controls button { background-color: var(--primary-accent); color: white; border: none; padding: 10px 15px; margin: 0 5px; border-radius: 5px; cursor: pointer; font-size: 1em; }
         #controls button.off { background-color: var(--danger-accent); }
 
-        /* --- 모바일 반응형 디자인 --- */
         @media (max-width: 768px) {
-            .lobby-container { flex-direction: column; }
-            .main-container { flex-direction: column; }
+            .lobby-container, .main-container { flex-direction: column; }
             #video-container { min-height: 50vh; }
             #chat-container { min-width: unset; width: 100%; flex: 1; }
             h1 { font-size: 2em; }
@@ -106,7 +89,10 @@
             </div>
             <div id="chat-container">
                 <ul id="chat-messages"></ul>
-                <form id="chat-form"> <input id="chat-input" type="text" placeholder="메시지를 입력하세요..." autocomplete="off"> </form>
+                <form id="chat-form">
+                    <input id="chat-input" type="text" placeholder="메시지를 입력하세요..." autocomplete="off">
+                    <button type="submit">전송</button>
+                </form>
             </div>
         </div>
         <div id="controls">
@@ -192,7 +178,7 @@
 
         // --- WebRTC 및 시그널링 로직 ---
         socket.on('user-joined-info', (data) => { peerNicknames[data.sid] = data.nickname; });
-
+        
         async function handleUserJoined({ sid }) {
             const pc = createPeerConnection(sid);
             if (!pc) return;
@@ -249,8 +235,8 @@
                     videoWrapper.className = 'video-wrapper';
                     videoWrapper.innerHTML = `
                         <video id="video-${sid}" autoplay playsinline></video>
-                        <div id="mute-icon-${sid}" class="status-icon">🔇</div>
-                        <div id="camera-off-icon-${sid}" class="status-icon">❌</div>
+                        <div id="mute-icon-${sid}" class="status-icon" style="display: none;">🔇</div>
+                        <div id="camera-off-icon-${sid}" class="status-icon" style="display: none;">❌</div>
                         <p>${peerNicknames[sid] || sid.substring(0, 5)}</p>
                     `;
                     videoContainer.appendChild(videoWrapper);
@@ -269,7 +255,6 @@
         });
 
         socket.on('nickname_changed', (data) => {
-            const oldNickname = (data.sid === socket.id) ? myNickname : peerNicknames[data.sid];
             if (data.sid === socket.id) {
                 myNickname = data.new_nickname;
                 myNicknameDisplay.textContent = `${myNickname} (나)`;
@@ -318,20 +303,19 @@
         });
         
         shareScreenBtn.addEventListener('click', async () => {
+            if (!myStream) return;
             if (isScreenSharing) {
                 try {
                     const newWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                    const newVideoTrack = newWebcamStream.getVideoTracks()[0];
-                    const newAudioTrack = newWebcamStream.getAudioTracks()[0];
                     myVideo.srcObject = newWebcamStream;
                     myStream.getTracks().forEach(track => track.stop());
                     myStream = newWebcamStream;
                     for (const sid in peerConnections) {
                         const pc = peerConnections[sid];
                         const videoSender = pc.getSenders().find(s => s.track?.kind === 'video');
-                        if (videoSender) await videoSender.replaceTrack(newVideoTrack);
+                        if (videoSender) await videoSender.replaceTrack(myStream.getVideoTracks()[0]);
                         const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
-                        if (audioSender) await audioSender.replaceTrack(newAudioTrack);
+                        if (audioSender) await audioSender.replaceTrack(myStream.getAudioTracks()[0]);
                     }
                     shareScreenBtn.textContent = '화면 공유';
                     isScreenSharing = false;
@@ -341,16 +325,17 @@
                     const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                     const screenVideoTrack = screenStream.getVideoTracks()[0];
                     const screenAudioTrack = screenStream.getAudioTracks()[0];
-                    const originalAudioTrack = myStream.getAudioTracks()[0];
-                    myVideo.srcObject = new MediaStream([screenVideoTrack, originalAudioTrack]);
+                    myVideo.srcObject = screenStream;
                     for (const sid in peerConnections) {
                         const pc = peerConnections[sid];
                         const videoSender = pc.getSenders().find(s => s.track?.kind === 'video');
                         if (videoSender) await videoSender.replaceTrack(screenVideoTrack);
-                        const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
-                        if (audioSender) await audioSender.replaceTrack(screenAudioTrack || originalAudioTrack);
+                        if (screenAudioTrack) {
+                            const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
+                            if (audioSender) await audioSender.replaceTrack(screenAudioTrack);
+                        }
                     }
-                    screenVideoTrack.onended = () => { if (isScreenSharing) shareScreenBtn.click(); };
+                    screenTrack.onended = () => { if (isScreenSharing) shareScreenBtn.click(); };
                     shareScreenBtn.textContent = '공유 중지';
                     isScreenSharing = true;
                 } catch (e) { console.error("화면 공유 실패:", e); }
