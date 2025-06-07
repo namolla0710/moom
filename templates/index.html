@@ -87,26 +87,21 @@
     </div>
 
     <div id="meeting-room">
-        <div id="header">현재 방: <span id="room-name-display"></span></div>
         <div class="main-container">
             <div id="video-container">
                 <div id="my-video-wrapper" class="video-wrapper">
                     <video id="my-video" autoplay muted></video>
+                    <div id="my-mute-icon" class="status-icon">🔇</div>
+                    <div id="my-camera-off-icon" class="status-icon">📷</div>
                     <p id="my-nickname-display">나 (You)</p>
                 </div>
             </div>
-            <div id="chat-container">
-                <ul id="chat-messages"></ul>
-                <form id="chat-form">
-                    <input id="chat-input" type="text" placeholder="메시지를 입력하세요..." autocomplete="off">
-                </form>
             </div>
-        </div>
         <div id="controls">
             <button id="mute-btn">음소거</button>
             <button id="camera-btn">카메라 끄기</button>
             <button id="share-screen-btn">화면 공유</button>
-        </div>
+            <button id="change-nickname-btn">닉네임 변경</button> </div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -135,6 +130,9 @@
         const chatForm = document.getElementById('chat-form');
         const chatInput = document.getElementById('chat-input');
         const chatMessages = document.getElementById('chat-messages');
+        const changeNicknameBtn = document.getElementById('change-nickname-btn');
+        const myMuteIcon = document.getElementById('my-mute-icon'), myCameraOffIcon = document.getElementById('my-camera-off-icon');
+
 
         // 상태 변수
         let myStream, peerConnections = {}, peerNicknames = {}, myNickname, currentRoomName;
